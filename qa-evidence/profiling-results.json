@@ -1,0 +1,17 @@
+{
+  "keyUnsealMs": 8.213,
+  "dbInitAndSeedMs": 163.3458,
+  "totalStartupMs": 171.5588,
+  "authLatencyMs": 91.8062,
+  "avgStudentQueryMs": 0.128139,
+  "memReport": {
+    "rssMb": "72.55",
+    "heapTotalMb": "11.04",
+    "heapUsedMb": "7.06",
+    "externalMb": "2.08"
+  },
+  "reportGenMs": 0.3101,
+  "csvMs": 0.1208,
+  "closeMs": 4.0266,
+  "timestamp": "2026-11-14T18:15:57.150Z"
+}
