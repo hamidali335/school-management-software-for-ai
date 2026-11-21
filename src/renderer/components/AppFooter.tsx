@@ -17,7 +17,7 @@ export const AppFooter: React.FC<AppFooterProps> = ({
   const isOnline = syncStatus?.network === 'online';
 
   return (
-    <footer className="h-7 w-full bg-white dark:bg-slate-900 border-t border-slate-200/90 dark:border-slate-800 px-4 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between select-none shrink-0 transition-colors">
+    <footer className="h-8 w-full bg-white dark:bg-slate-900 border-t border-slate-200/90 dark:border-slate-800 px-4 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between select-none shrink-0 transition-colors">
       {/* Left: Application Identity & School Name */}
       <div className="flex items-center space-x-2.5 truncate">
         <span className="font-semibold text-slate-700 dark:text-slate-300">

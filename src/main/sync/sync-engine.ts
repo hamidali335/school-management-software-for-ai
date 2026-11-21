@@ -13,6 +13,7 @@ import {
 import { ConflictResolver, ConflictRecord } from './conflict-resolver';
 import { ISyncApiClient, HttpSyncApiClient, MockSyncBackendAdapter, SyncPushEvent, SyncHttpError, UnconfiguredSyncApiClient } from './sync-api-client';
 import { CredentialVault } from '../security/credential-vault';
+import { CloudTokenManager } from '../security/cloud-token-manager';
 import { NetworkState, SyncState, SyncStatus } from '../../shared/types';
 import { getDefaultCloudApiBaseUrl } from '../config/endpoints';
 import { DeploymentConfigService } from '../services/deployment-config';
@@ -231,9 +232,39 @@ export class SyncEngine {
       uploadedCount = uploadRes.uploadedCount;
       conflictCount += uploadRes.conflictCount;
 
-      // 3. Download Phase (Pull remote server changes)
+      // 3. Initial Bootstrap Check: if this workstation has no cursor yet or empty local mirror, hydrate from cloud
+      let cursorRow: { last_seq?: number } | undefined;
+      try {
+        cursorRow = this.db
+          .prepare('SELECT last_seq FROM sync_school_cursor WHERE school_id = ?')
+          .get(schoolId) as { last_seq?: number } | undefined;
+      } catch {}
+
+      let localStudentCount = 0;
+      let localClassCount = 0;
+      try {
+        localStudentCount = (this.db.prepare('SELECT COUNT(*) as c FROM students WHERE school_id = ?').get(schoolId) as any)?.c || 0;
+        localClassCount = (this.db.prepare('SELECT COUNT(*) as c FROM classes WHERE school_id = ?').get(schoolId) as any)?.c || 0;
+      } catch {}
+
+      let localInvoiceCount = 0;
+      let localEmployeeCount = 0;
+      try {
+        localInvoiceCount = (this.db.prepare('SELECT COUNT(*) as c FROM invoices WHERE school_id = ?').get(schoolId) as any)?.c || 0;
+        localEmployeeCount = (this.db.prepare('SELECT COUNT(*) as c FROM employees WHERE school_id = ?').get(schoolId) as any)?.c || 0;
+      } catch {}
+      if (!cursorRow || localStudentCount === 0 || localClassCount === 0 || localInvoiceCount === 0 || localEmployeeCount === 0) {
+        try {
+          const restCount = await this.hydrateFromCloudRest(schoolId, deviceConfig.deviceId);
+          downloadedCount += restCount;
+        } catch (restErr) {
+          console.warn('[SyncEngine] REST bootstrap hydration skipped:', restErr);
+        }
+      }
+
+      // 4. Download Phase (Pull remote server changes)
       const downloadRes = await this.executeDownloadPhase(schoolId, deviceConfig.deviceId);
-      downloadedCount = downloadRes.downloadedCount;
+      downloadedCount += downloadRes.downloadedCount;
       conflictCount += downloadRes.conflictCount;
 
       this.lastSyncedAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
@@ -293,7 +324,20 @@ export class SyncEngine {
 
     let response: any;
     try {
-      response = await this.apiClient.pushBatch(schoolId, deviceId, pushEvents, this.getAuthToken());
+      try {
+        response = await this.apiClient.pushBatch(schoolId, deviceId, pushEvents, this.getAuthToken());
+      } catch (authErr: any) {
+        if (authErr instanceof SyncHttpError && authErr.status === 401) {
+          const refreshed = await CloudTokenManager.refreshAccessToken(this.db);
+          if (refreshed) {
+            response = await this.apiClient.pushBatch(schoolId, deviceId, pushEvents, refreshed);
+          } else {
+            throw authErr;
+          }
+        } else {
+          throw authErr;
+        }
+      }
     } catch (err: any) {
       if (err instanceof SyncHttpError && err.status === 426) {
         this.syncState = 'update_required' as any;
@@ -399,7 +443,21 @@ export class SyncEngine {
     let changes: any[] = [];
     if (this.apiClient.getChanges) {
       try {
-        const streamRes = await this.apiClient.getChanges(lastSeq, this.batchSize, this.getAuthToken(), deviceId);
+        let streamRes;
+        try {
+          streamRes = await this.apiClient.getChanges(lastSeq, this.batchSize, this.getAuthToken(), deviceId);
+        } catch (authErr: any) {
+          if (authErr instanceof SyncHttpError && authErr.status === 401) {
+            const refreshed = await CloudTokenManager.refreshAccessToken(this.db);
+            if (refreshed) {
+              streamRes = await this.apiClient.getChanges(lastSeq, this.batchSize, refreshed, deviceId);
+            } else {
+              throw authErr;
+            }
+          } else {
+            throw authErr;
+          }
+        }
         changes = streamRes.changes || [];
       } catch (err: any) {
         if (err instanceof SyncHttpError && err.status === 410) {
@@ -587,24 +645,265 @@ export class SyncEngine {
     return { downloadedCount, conflictCount };
   }
 
+  /**
+   * Hydrates core local SQLite tables (academic_sessions, classes, sections, students, employees, invoices)
+   * directly from the authenticated cloud REST API on initial workstation bootstrap so existing cloud data
+   * appears immediately across Dashboard, Students, Fees, Academics, and Staff screens.
+   */
+  public async hydrateFromCloudRest(schoolId: string, deviceId: string): Promise<number> {
+    const baseUrl = this.getApiBaseUrl();
+    const token = this.getAuthToken();
+    if (!baseUrl || !token) return 0;
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'X-Client-Type': 'desktop',
+      'X-Client-Version': '1.0.0',
+      'X-Outbox-Schema-Version': '2',
+      'X-Device-Id': deviceId,
+    };
+
+    const fetchList = async (endpoint: string): Promise<any[]> => {
+      try {
+        let res = await fetch(`${baseUrl}${endpoint}`, { method: 'GET', headers });
+        if (res.status === 401) {
+          const refreshed = await CloudTokenManager.refreshAccessToken(this.db);
+          if (refreshed) {
+            headers.Authorization = `Bearer ${refreshed}`;
+            res = await fetch(`${baseUrl}${endpoint}`, { method: 'GET', headers });
+          }
+        }
+        if (!res.ok) return [];
+        const json: any = await res.json();
+        const data = json?.data ?? json;
+        if (Array.isArray(data)) return data;
+        if (Array.isArray(data?.items)) return data.items;
+        return [];
+      } catch {
+        return [];
+      }
+    };
+
+    const [sessions, classes, sections, students, employees, invoices] = await Promise.all([
+      fetchList('/academics/sessions?limit=100'),
+      fetchList('/academics/classes?limit=200'),
+      fetchList('/academics/sections?limit=500'),
+      fetchList('/students?limit=500'),
+      fetchList('/employees?limit=500'),
+      fetchList('/fees/invoices?limit=500'),
+    ]);
+
+    let count = 0;
+    setApplyingRemoteChanges(true);
+    try {
+      const tx = this.db.transaction(() => {
+        for (const s of sessions) {
+          const id = String(s._id || s.id || '');
+          if (!id) continue;
+          try {
+            this.db.prepare(`
+              INSERT INTO academic_sessions (id, school_id, name, start_date, end_date, is_current)
+              VALUES (?, ?, ?, ?, ?, ?)
+              ON CONFLICT(id) DO UPDATE SET
+                name = excluded.name,
+                start_date = excluded.start_date,
+                end_date = excluded.end_date,
+                is_current = excluded.is_current
+            `).run(
+              id,
+              schoolId,
+              s.name || '2026-2027',
+              String(s.startDate || '2026-04-01').slice(0, 10),
+              String(s.endDate || '2027-03-31').slice(0, 10),
+              s.isCurrent ? 1 : 0,
+            );
+            count++;
+          } catch {}
+        }
+
+        for (let i = 0; i < classes.length; i++) {
+          const c = classes[i];
+          const id = String(c._id || c.id || '');
+          if (!id) continue;
+          try {
+            this.db.prepare(`
+              INSERT INTO classes (id, school_id, name, order_index)
+              VALUES (?, ?, ?, ?)
+              ON CONFLICT(id) DO UPDATE SET
+                name = excluded.name,
+                order_index = excluded.order_index
+            `).run(id, schoolId, c.name || `Class ${i + 1}`, Number(c.level ?? i + 1));
+            count++;
+          } catch {}
+        }
+
+        for (const sec of sections) {
+          const id = String(sec._id || sec.id || '');
+          const classId = String(sec.classId?._id || sec.classId || '');
+          if (!id || !classId) continue;
+          try {
+            this.db.prepare(`
+              INSERT INTO sections (id, school_id, class_id, name)
+              VALUES (?, ?, ?, ?)
+              ON CONFLICT(id) DO UPDATE SET
+                name = excluded.name,
+                class_id = excluded.class_id
+            `).run(id, schoolId, classId, sec.name || 'A');
+            count++;
+          } catch {}
+        }
+
+        for (const st of students) {
+          const id = String(st._id || st.id || '');
+          if (!id) continue;
+          const fullName = `${st.firstName || ''} ${st.lastName || ''}`.trim() || st.fullName || st.admissionNo || 'Student';
+          const primaryGuard = Array.isArray(st.guardians) ? st.guardians[0] : null;
+          const fatherName = primaryGuard?.parentId?.name || primaryGuard?.name || st.fatherName || 'Guardian';
+          const gender = ['male', 'female', 'other'].includes(String(st.gender || '').toLowerCase())
+            ? String(st.gender).toLowerCase()
+            : 'male';
+          try {
+            this.db.prepare(`
+              INSERT INTO students (id, school_id, admission_number, full_name, father_name, gender, date_of_birth, phone, address, status)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              ON CONFLICT(id) DO UPDATE SET
+                full_name = excluded.full_name,
+                father_name = excluded.father_name,
+                phone = excluded.phone,
+                address = excluded.address,
+                status = excluded.status
+            `).run(
+              id,
+              schoolId,
+              st.admissionNo || st.admissionNumber || id.slice(-8),
+              fullName,
+              fatherName,
+              gender,
+              st.dateOfBirth ? String(st.dateOfBirth).slice(0, 10) : null,
+              st.phone || null,
+              st.address || null,
+              st.status || 'active',
+            );
+            count++;
+          } catch {}
+        }
+
+        for (const emp of employees) {
+          const id = String(emp._id || emp.id || '');
+          if (!id) continue;
+          const fullName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.fullName || 'Staff';
+          try {
+            this.db.prepare(`
+              INSERT INTO employees (id, school_id, employee_code, full_name, designation, phone, email, status)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              ON CONFLICT(id) DO UPDATE SET
+                full_name = excluded.full_name,
+                designation = excluded.designation,
+                phone = excluded.phone,
+                status = excluded.status
+            `).run(
+              id,
+              schoolId,
+              emp.employeeNo || id.slice(-6),
+              fullName,
+              emp.designation || 'Teacher',
+              emp.phone || null,
+              emp.email || null,
+              emp.status || 'active',
+            );
+            count++;
+          } catch {}
+        }
+
+        for (const inv of invoices) {
+          const id = String(inv._id || inv.id || '');
+          const studentId = String(inv.studentId?._id || inv.studentId || '');
+          if (!id || !studentId) continue;
+          try {
+            const defaultSessionId =
+              String(inv.sessionId?._id || inv.sessionId || '') ||
+              (sessions[0] ? String(sessions[0]._id || sessions[0].id || '') : '');
+            if (!defaultSessionId) continue;
+            const mappedStatus =
+              inv.status === 'partial' ? 'partially_paid' :
+              ['unpaid', 'partially_paid', 'paid', 'overdue'].includes(inv.status) ? inv.status : 'unpaid';
+            this.db.prepare(`
+              INSERT INTO invoices (id, school_id, challan_number, student_id, session_id, month, due_date, amount, previous_dues, paid_amount, balance, status)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+              ON CONFLICT(id) DO UPDATE SET
+                amount = excluded.amount,
+                paid_amount = excluded.paid_amount,
+                balance = excluded.balance,
+                status = excluded.status
+            `).run(
+              id,
+              schoolId,
+              inv.invoiceNo || id.slice(-8),
+              studentId,
+              defaultSessionId,
+              inv.period || '2026-11',
+              inv.dueDate ? String(inv.dueDate).slice(0, 10) : '2026-11-30',
+              Number(inv.total || 0),
+              Number(inv.paid || 0),
+              Number(inv.balance || 0),
+              mappedStatus,
+            );
+            count++;
+          } catch {}
+        }
+      });
+      tx();
+    } finally {
+      setApplyingRemoteChanges(false);
+    }
+
+    return count;
+  }
+
   public async executeFullResync(schoolId: string, deviceId: string): Promise<{ downloadedCount: number; conflictCount: number }> {
     // 1. Flush pending outbox changes first
     await this.executeUploadPhase(schoolId, deviceId);
 
-    // 2. Start snapshot
-    const snap = await this.apiClient.startSnapshot(['STUDENT', 'ATTENDANCE'], this.getAuthToken(), deviceId);
+    // 2. Start consistent snapshot for all role-allowed offline-readable entities
+    const defaultEntities = [
+      'STUDENT', 'ATTENDANCE', 'GUARDIAN', 'CLASS', 'SECTION',
+      'SESSION', 'SUBJECT', 'TIMETABLE', 'EXAM', 'FEE_STRUCTURE', 'INVOICE',
+    ];
+    const snap: any = await this.apiClient.startSnapshot(defaultEntities, this.getAuthToken(), deviceId);
+    const entitiesToFetch: string[] = Array.isArray(snap?.entities) && snap.entities.length > 0
+      ? snap.entities
+      : ['STUDENT', 'ATTENDANCE'];
+    const snapshotSeq = typeof snap?.seq === 'number' ? snap.seq : 0;
     let downloadedCount = 0;
 
     setApplyingRemoteChanges(true);
     try {
-      for (const entity of ['STUDENT', 'ATTENDANCE']) {
+      for (const entity of entitiesToFetch) {
         let cursor: string | null = null;
         let hasMore = true;
         while (hasMore) {
           const page = await this.apiClient.getSnapshotPage(snap.snapshotId, entity, cursor, 100, this.getAuthToken(), deviceId);
           const runTx = this.db.transaction(() => {
             for (const item of page.items) {
-              this.applyRecordToLocalDatabase(entity, 'INSERT', item, schoolId);
+              if (entity === 'STUDENT' || entity === 'ATTENDANCE' || entity === 'INVOICE') {
+                try {
+                  this.applyRecordToLocalDatabase(entity, 'INSERT', item, schoolId);
+                } catch {}
+              }
+              try {
+                const entityId = String(item.id || item._id || '');
+                if (entityId) {
+                  this.db.prepare(`
+                    INSERT INTO offline_mirror_cache (school_id, entity_type, entity_id, payload_json, seq, updated_at)
+                    VALUES (?, ?, ?, ?, ?, datetime('now'))
+                    ON CONFLICT(school_id, entity_type, entity_id) DO UPDATE SET
+                      payload_json = excluded.payload_json,
+                      seq = excluded.seq,
+                      updated_at = datetime('now')
+                  `).run(schoolId, entity, entityId, JSON.stringify(item), snapshotSeq);
+                }
+              } catch {}
               downloadedCount++;
             }
           });
@@ -614,15 +913,15 @@ export class SyncEngine {
         }
       }
 
-      // 3. Reset or advance cursor
+      // 3. Advance cursor to snapshot seq only after all batches commit
       try {
         this.db.prepare(`
           INSERT INTO sync_school_cursor (school_id, last_seq, updated_at)
-          VALUES (?, 0, datetime('now'))
+          VALUES (?, ?, datetime('now'))
           ON CONFLICT(school_id) DO UPDATE SET
-            last_seq = 0,
+            last_seq = excluded.last_seq,
             updated_at = excluded.updated_at
-        `).run(schoolId);
+        `).run(schoolId, snapshotSeq);
       } catch {}
 
       return { downloadedCount, conflictCount: 0 };

@@ -18,9 +18,27 @@ import { useToast } from '../context/ToastContext';
 interface AttendanceViewProps {
   onBack: () => void;
   sessionToken?: string | null;
+  onOpenSyncCenter?: () => void;
 }
 
-export const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, sessionToken }) => {
+export const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, sessionToken, onOpenSyncCenter }) => {
+  const [pendingAttSync, setPendingAttSync] = useState(0);
+  const [attConflictCount, setAttConflictCount] = useState(0);
+
+  useEffect(() => {
+    async function loadSyncBadges() {
+      const api = window.desktopAPI as any;
+      if (!api?.getSyncCenterData || !sessionToken) return;
+      try {
+        const res = await api.getSyncCenterData(sessionToken);
+        const pend = (res?.pending || []).filter((x: any) => String(x.entityType || '').toUpperCase().includes('ATTENDANCE')).length;
+        const conf = (res?.conflicts || []).filter((x: any) => String(x.entityType || '').toUpperCase().includes('ATTENDANCE')).length;
+        setPendingAttSync(pend);
+        setAttConflictCount(conf);
+      } catch {}
+    }
+    loadSyncBadges();
+  }, [sessionToken]);
   const { success: toastSuccess, error: toastError } = useToast();
   const today = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState(today);
@@ -203,6 +221,32 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, sessionT
           </Button>
         </div>
       </div>
+
+      {(pendingAttSync > 0 || attConflictCount > 0) && (
+        <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-[#EEF2FF] dark:bg-indigo-950/40 text-xs">
+          <div className="flex items-center space-x-2">
+            {pendingAttSync > 0 && (
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full font-semibold bg-[#FFFBEB] text-[#B45309] border border-amber-200">
+                Pending sync: {pendingAttSync} attendance change(s)
+              </span>
+            )}
+            {attConflictCount > 0 && (
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full font-semibold bg-[#FFF1F2] text-[#BE123C] border border-rose-200">
+                {attConflictCount} attendance conflict(s) require review
+              </span>
+            )}
+          </div>
+          {onOpenSyncCenter && (
+            <button
+              type="button"
+              onClick={onOpenSyncCenter}
+              className="px-3 py-1 rounded-lg bg-[#6366F1] hover:bg-[#4F46E5] text-white font-semibold"
+            >
+              Open Sync Center
+            </button>
+          )}
+        </div>
+      )}
 
       {statusMessage && (
         <div

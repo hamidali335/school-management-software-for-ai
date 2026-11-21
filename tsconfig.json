@@ -18,7 +18,8 @@
     "paths": {
       "@/*": ["./src/renderer/*"],
       "@shared/*": ["./src/shared/*"]
-    }
+    },
+    "types": ["node"]
   },
-  "include": ["src/renderer", "src/shared"]
+  "include": ["src/renderer/**/*", "src/shared/**/*", "src/main/**/*", "src/preload/**/*"]
 }

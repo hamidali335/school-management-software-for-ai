@@ -710,7 +710,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ onBack, sessionToken
       <Modal
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
-        title={profileData?.student?.full_name ? `${profileData.student.full_name} — Complete Profile` : 'Student Profile'}
+        title={(profileData?.student?.fullName || profileData?.student?.full_name) ? `${profileData.student.fullName || profileData.student.full_name} — Complete Profile` : 'Student Profile'}
         size="3xl"
         footer={
           <Button variant="secondary" onClick={() => setIsProfileOpen(false)}>
@@ -725,9 +725,9 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ onBack, sessionToken
             {/* Top Bio Header */}
             <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">{profileData.student.full_name}</h3>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">{profileData.student.fullName || profileData.student.full_name || 'Student'}</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Admission #: <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">{profileData.student.admission_number}</span> | Father: {profileData.student.father_name}
+                  Admission #: <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">{profileData.student.admissionNumber || profileData.student.admission_number || '—'}</span> | Father: {profileData.student.fatherName || profileData.student.father_name || '—'}
                 </p>
               </div>
               <Badge variant={profileData.student.status === 'active' ? 'success' : 'neutral'} dot>
@@ -763,12 +763,12 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ onBack, sessionToken
 
               {profileData.activeGuardian ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs">
-                  <div><span className="text-slate-400 dark:text-slate-500">Name:</span> <strong className="text-slate-800 dark:text-slate-200">{profileData.activeGuardian.full_name}</strong></div>
+                  <div><span className="text-slate-400 dark:text-slate-500">Name:</span> <strong className="text-slate-800 dark:text-slate-200">{profileData.activeGuardian.fullName || profileData.activeGuardian.full_name}</strong></div>
                   <div><span className="text-slate-400 dark:text-slate-500">Relation:</span> <strong className="text-slate-800 dark:text-slate-200 uppercase">{profileData.activeGuardian.relationship}</strong></div>
                   <div><span className="text-slate-400 dark:text-slate-500">Phone:</span> <strong className="text-slate-800 dark:text-slate-200">{profileData.activeGuardian.phone}</strong></div>
                   <div><span className="text-slate-400 dark:text-slate-500">CNIC:</span> <strong className="text-slate-800 dark:text-slate-200">{profileData.activeGuardian.cnic || '—'}</strong></div>
                   <div><span className="text-slate-400 dark:text-slate-500">Occupation:</span> <strong className="text-slate-800 dark:text-slate-200">{profileData.activeGuardian.occupation || '—'}</strong></div>
-                  <div><span className="text-slate-400 dark:text-slate-500">Since:</span> <strong className="text-slate-800 dark:text-slate-200">{profileData.activeGuardian.created_at?.split(' ')[0] || '—'}</strong></div>
+                  <div><span className="text-slate-400 dark:text-slate-500">Since:</span> <strong className="text-slate-800 dark:text-slate-200">{(profileData.activeGuardian.createdAt || profileData.activeGuardian.created_at || '').slice(0, 10) || '—'}</strong></div>
                 </div>
               ) : (
                 <p className="text-xs text-amber-600 dark:text-amber-400">No active guardian registered.</p>

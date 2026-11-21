@@ -4,7 +4,7 @@ import path from 'node:path';
 import { CredentialVault } from './credential-vault';
 import { DeviceFingerprint } from './device-fingerprint';
 
-export type KeyLockReason = 'SUBSCRIPTION_EXPIRED' | 'CLOCK_TAMPERED' | 'MANUAL_LOCK' | 'UNAUTHENTICATED';
+export type KeyLockReason = 'SUBSCRIPTION_EXPIRED' | 'CLOCK_TAMPERED' | 'MANUAL_LOCK' | 'UNAUTHENTICATED' | 'LICENSE_REVOKED' | 'DEVICE_MISMATCH';
 
 export class DatabaseKeyManager {
   private static instance: DatabaseKeyManager | null = null;
@@ -66,12 +66,21 @@ export class DatabaseKeyManager {
         const encryptedEnvelope = fs.readFileSync(this.keyFilePath, 'utf8');
         const rawHex = CredentialVault.decryptSecret(encryptedEnvelope);
         
-        // Machine isolation verify: ensure fingerprint matches
+        // Machine isolation verify: ensure fingerprint matches this workstation
         const [keyHex, fingerprint] = rawHex.split('::');
         const currentFingerprint = DeviceFingerprint.getFingerprint();
         
-        if (fingerprint && fingerprint !== currentFingerprint) {
+        if (fingerprint && !DeviceFingerprint.matches(fingerprint)) {
           throw new Error('DEVICE_ISOLATION_VIOLATION: Database key belongs to another workstation.');
+        }
+
+        // Auto-heal / re-seal: if stored fingerprint was a legacy variation, upgrade envelope with canonical fingerprint
+        if (fingerprint && fingerprint !== currentFingerprint && DeviceFingerprint.matches(fingerprint)) {
+          try {
+            const upgradedPayload = `${keyHex}::${currentFingerprint}`;
+            const upgradedEnvelope = CredentialVault.encryptSecret(upgradedPayload);
+            fs.writeFileSync(this.keyFilePath, upgradedEnvelope, { encoding: 'utf8', mode: 0o600 });
+          } catch {}
         }
 
         this.keyBuffer = Buffer.from(keyHex, 'hex');
@@ -181,11 +190,21 @@ export class DatabaseKeyManager {
     if (fs.existsSync(this.keyFilePath)) {
       const encryptedEnvelope = fs.readFileSync(this.keyFilePath, 'utf8');
       const rawHex = CredentialVault.decryptSecret(encryptedEnvelope);
+      // Machine isolation verify: ensure fingerprint matches this workstation
       const [keyHex, fingerprint] = rawHex.split('::');
       const currentFingerprint = DeviceFingerprint.getFingerprint();
       
-      if (fingerprint && fingerprint !== currentFingerprint) {
+      if (fingerprint && !DeviceFingerprint.matches(fingerprint)) {
         throw new Error('DEVICE_ISOLATION_VIOLATION: Database key belongs to another workstation.');
+      }
+
+      // Auto-heal / re-seal: if stored fingerprint was a legacy variation, upgrade envelope with canonical fingerprint
+      if (fingerprint && fingerprint !== currentFingerprint && DeviceFingerprint.matches(fingerprint)) {
+        try {
+          const upgradedPayload = `${keyHex}::${currentFingerprint}`;
+          const upgradedEnvelope = CredentialVault.encryptSecret(upgradedPayload);
+          fs.writeFileSync(this.keyFilePath, upgradedEnvelope, { encoding: 'utf8', mode: 0o600 });
+        } catch {}
       }
 
       this.keyBuffer = Buffer.from(keyHex, 'hex');

@@ -3,7 +3,7 @@ import { getDatabase } from '../database/connection';
 import { SyncEngine } from './sync-engine';
 import { ISyncApiClient, HttpSyncApiClient } from './sync-api-client';
 import { ConflictRecord } from './conflict-resolver';
-
+import { CredentialVault } from '../security/credential-vault';
 import { getDefaultCloudApiBaseUrl } from '../config/endpoints';
 
 export class SyncManager {
@@ -25,6 +25,66 @@ export class SyncManager {
 
   public getApiClient(): ISyncApiClient {
     return this.getEngine().getApiClient();
+  }
+
+  public getAuthToken(): string | undefined {
+    return this.getEngine().getAuthToken();
+  }
+
+  public async refreshAuthToken(): Promise<string | null> {
+    try {
+      const db = getDatabase();
+      const row = db.prepare('SELECT refresh_token_encrypted, api_base_url FROM sync_device_config LIMIT 1').get() as {
+        refresh_token_encrypted?: string;
+        api_base_url?: string;
+      } | undefined;
+      if (!row?.refresh_token_encrypted) return null;
+
+      let refreshToken: string;
+      try {
+        refreshToken = CredentialVault.decryptSecret(row.refresh_token_encrypted);
+      } catch {
+        refreshToken = row.refresh_token_encrypted;
+      }
+      if (!refreshToken) return null;
+
+      const baseUrl = row.api_base_url || this.getRemoteBackendUrl();
+      if (!baseUrl) return null;
+
+      const res = await fetch(`${baseUrl}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!res.ok) {
+        return null;
+      }
+
+      const json: any = await res.json();
+      const data = json?.data || json;
+      const newAccessToken = data?.accessToken;
+      const newRefreshToken = data?.refreshToken;
+
+      if (newAccessToken) {
+        let encAccess = newAccessToken;
+        let encRefresh = newRefreshToken || refreshToken;
+        try {
+          encAccess = CredentialVault.encryptSecret(newAccessToken);
+          if (newRefreshToken) encRefresh = CredentialVault.encryptSecret(newRefreshToken);
+        } catch {}
+
+        db.prepare(`
+          UPDATE sync_device_config
+          SET auth_token_encrypted = ?,
+              refresh_token_encrypted = ?,
+              updated_at = datetime('now')
+          WHERE id = 1
+        `).run(encAccess, encRefresh);
+        return newAccessToken;
+      }
+    } catch {}
+    return null;
   }
 
   public getStatus(): SyncStatus {

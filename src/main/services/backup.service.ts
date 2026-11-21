@@ -588,4 +588,24 @@ export class BackupService {
     } catch {}
     return 'unregistered_device';
   }
+
+  /**
+   * Exports a standalone AES-256-GCM encrypted snapshot of all unsynchronized outbox rows
+   * so scheduled backups always preserve pending offline work (Section 6.10).
+   */
+  public exportEncryptedOutboxSnapshot(passphrase?: string): { encryptedBuffer: Buffer; rowCount: number } {
+    const rows = this.db
+      .prepare("SELECT * FROM sync_outbox WHERE state != 'synced' ORDER BY created_at ASC")
+      .all() as any[];
+    const payload = Buffer.from(
+      JSON.stringify({ exportedAt: new Date().toISOString(), count: rows.length, rows }),
+      'utf8',
+    );
+    const key = passphrase || this.getDefaultPassphrase();
+    return {
+      encryptedBuffer: this.encryptPayload(payload, key),
+      rowCount: rows.length,
+    };
+  }
+
 }

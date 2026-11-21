@@ -30,6 +30,7 @@ import {
   ErrorPanel,
 } from '../components/ui';
 import { useToast } from '../context/ToastContext';
+import { PrintableReceiptModal, PrintableReceiptData } from '../components/PrintableReceiptModal';
 
 interface FeesViewProps {
   onBack: () => void;
@@ -115,6 +116,20 @@ export const FeesView: React.FC<FeesViewProps> = ({ onBack, sessionToken }) => {
   // Payment Collection Modal State
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<any | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [printableReceipt, setPrintableReceipt] = useState<PrintableReceiptData | null>(null);
+  const [receiptBlockInfo, setReceiptBlockInfo] = useState<{ remaining: number; needsRefill: boolean; workstationCode: string } | null>(null);
+
+  useEffect(() => {
+    async function loadBlockInfo() {
+      const api = window.desktopAPI as any;
+      if (!api?.getReceiptBlockStatus || !sessionToken) return;
+      try {
+        const info = await api.getReceiptBlockStatus(sessionToken);
+        if (info) setReceiptBlockInfo(info);
+      } catch {}
+    }
+    loadBlockInfo();
+  }, [sessionToken]);
   const [paymentForm, setPaymentForm] = useState({
     receiptNumber: '',
     amount: 0,
@@ -343,10 +358,21 @@ export const FeesView: React.FC<FeesViewProps> = ({ onBack, sessionToken }) => {
     setPaymentError(null);
     try {
       const paymentId = `pay_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      let resolvedReceiptNo = (paymentForm.receiptNumber || '').trim();
+      let isProvisional = resolvedReceiptNo.startsWith('PROV-');
+      const apiAny = window.desktopAPI as any;
+      if (!resolvedReceiptNo && apiAny?.issueOfflineReceipt) {
+        const issued = await apiAny.issueOfflineReceipt(sessionToken);
+        resolvedReceiptNo = issued.receiptNo;
+        isProvisional = Boolean(issued.isProvisional);
+        setReceiptBlockInfo((prev) =>
+          prev ? { ...prev, remaining: issued.remainingInBlocks, needsRefill: issued.needsRefill } : prev,
+        );
+      }
       const res = await window.desktopAPI.collectFee(sessionToken, {
         id: paymentId,
         invoiceId: selectedInvoiceForPayment.id,
-        receiptNumber: paymentForm.receiptNumber,
+        receiptNumber: resolvedReceiptNo,
         amount: Number(paymentForm.amount),
         paymentDate: paymentForm.paymentDate,
         paymentMethod: paymentForm.paymentMethod as any,
@@ -355,9 +381,26 @@ export const FeesView: React.FC<FeesViewProps> = ({ onBack, sessionToken }) => {
       if (!res.success) throw new Error(res.error || 'Payment failed');
 
       toastSuccess(
-        `Collected payment of Rs. ${Number(paymentForm.amount).toLocaleString()} (Receipt: ${paymentForm.receiptNumber})`,
+        `Collected payment of Rs. ${Number(paymentForm.amount).toLocaleString()} (Receipt: ${resolvedReceiptNo}${isProvisional ? ' — PROVISIONAL' : ''})`,
         'Payment Collected'
       );
+      const paidAmt = Number(paymentForm.amount);
+      const prevBal = Number(selectedInvoiceForPayment.balance || 0);
+      const isOverpaid = paidAmt > prevBal && prevBal >= 0;
+      setPrintableReceipt({
+        receiptNo: resolvedReceiptNo,
+        isProvisional,
+        transactionId: paymentId,
+        studentName: selectedInvoiceForPayment.student_name || selectedInvoiceForPayment.studentName || 'Student',
+        admissionNo: selectedInvoiceForPayment.admission_no || selectedInvoiceForPayment.admissionNo,
+        invoiceNo: selectedInvoiceForPayment.invoice_no || selectedInvoiceForPayment.invoiceNo,
+        amount: paidAmt,
+        method: paymentForm.paymentMethod,
+        date: paymentForm.paymentDate,
+        overpaid: isOverpaid,
+        overpaidAmount: isOverpaid ? paidAmt - prevBal : 0,
+        syncStatus: isProvisional ? 'pending' : 'synced',
+      });
       setSelectedInvoiceForPayment(null);
       setPaymentError(null);
       await loadData();
@@ -1269,6 +1312,7 @@ export const FeesView: React.FC<FeesViewProps> = ({ onBack, sessionToken }) => {
         variant="danger"
         loading={cancelLoading}
       />
+      <PrintableReceiptModal receipt={printableReceipt} onClose={() => setPrintableReceipt(null)} />
     </div>
   );
 };

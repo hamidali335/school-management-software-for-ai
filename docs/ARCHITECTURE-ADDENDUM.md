@@ -55,3 +55,12 @@ The desktop outbox schema enforces exactly six discrete states:
 4. `synced`: Confirmed by central server.
 5. `conflict`: Server conflict requiring resolution.
 6. `needs_attention`: Permanent rejection or 20+ consecutive HTTP 500 failures requiring administrative intervention.
+
+---
+
+## Section 11: Architectural Decisions
+
+### Decision 1 — Subscription Expiry, Permission Snapshot Expiry, and Tamper Lockout (Slice 5)
+- **Normal subscription expiry or expired offline permission snapshot:** Application enters **read-only mode**. Local data remains readable and is never silently deleted; **Backup and Export remain available**; all local writes and cloud synchronization are blocked until renewed/revalidated online.
+- **Clock tampering or revoked license:** The local SQLCipher database encryption key **remains locked** (fail-closed) until online revalidation succeeds.
+- **SQLCipher + DPAPI hardware-bound encryption:** Preserved as approved; do not weaken or replace.

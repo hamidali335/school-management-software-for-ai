@@ -2,39 +2,134 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * School OS Desktop Design Tokens — aligned with the official School OS Web Portal
+ * Brand palette: Navy (#1B2A59), Royal Blue (#2563EB), Teal (#14B8A6), Calm Cool Slate surface.
+ */
 :root {
-  --color-primary: #4f46e5;
-  --color-primary-hover: #4338ca;
-  --color-primary-light: #eef2ff;
-  --color-bg-app: #f8fafc;
-  --color-bg-surface: #ffffff;
-  --color-text-main: #0f172a;
-  --color-text-muted: #64748b;
-  --color-border: #e2e8f0;
+  --color-brand-navy: #1B2A59;
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-primary-pressed: #1E40AF;
+  --color-primary-tint: #EFF6FF;
+  --color-primary-light: #DBEAFE;
+  --color-teal: #14B8A6;
+  --color-amber: #D97706;
+  --color-rose: #E11D48;
+  --color-sky: #0284C7;
+  --color-violet: #4F46E5;
+  --color-emerald: #059669;
+  --color-bg-app: #F4F6FB;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-subtle: #F8FAFC;
+  --color-border: #E2E8F0;
+  --color-text-main: #16213E;
+  --color-text-secondary: #334155;
+  --color-text-muted: #5B6780;
+  --color-success-fg: #047857;
+  --color-success-bg: #ECFDF5;
+  --color-warning-fg: #B45309;
+  --color-warning-bg: #FFFBEB;
+  --color-danger-fg: #BE123C;
+  --color-danger-bg: #FFF1F2;
+  --color-info-fg: #0369A1;
+  --color-info-bg: #F0F9FF;
+  --shadow-card: 0 1px 2px rgba(27, 42, 89, 0.05), 0 6px 18px -8px rgba(27, 42, 89, 0.12);
+  --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.2);
 }
 
 .dark {
-  --color-primary: #6366f1;
-  --color-primary-hover: #818cf8;
-  --color-primary-light: #1e1b4b;
-  --color-bg-app: #090d16;
+  --color-brand-navy: #2563EB;
+  --color-primary: #3B82F6;
+  --color-primary-hover: #2563EB;
+  --color-primary-pressed: #1D4ED8;
+  --color-primary-tint: #1E293B;
+  --color-primary-light: #1E3A8A;
+  --color-bg-app: #0B1120;
   --color-bg-surface: #111827;
-  --color-text-main: #f8fafc;
-  --color-text-muted: #94a3b8;
-  --color-border: #1f2937;
+  --color-bg-subtle: #1E293B;
+  --color-border: #263147;
+  --color-text-main: #F8FAFC;
+  --color-text-secondary: #CBD5E1;
+  --color-text-muted: #94A3B8;
 }
 
 @layer base {
+  html {
+    font-size: 16px;
+  }
+
   body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: 'Segoe UI Variable Text', 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
     color: var(--color-text-main);
     background-color: var(--color-bg-app);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  h1 {
+    font-size: 1.625rem;
+    line-height: 2.1rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.7rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  h3 {
+    font-size: 1.0625rem;
+    line-height: 1.5rem;
+    font-weight: 600;
+  }
+
+  label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+  }
+
+  input, select, textarea {
+    font-size: 0.9375rem;
+  }
+
+  .text-xs {
+    font-size: 0.84rem;
+    line-height: 1.3rem;
+  }
+
+  .text-sm {
+    font-size: 0.9375rem;
+    line-height: 1.45rem;
+  }
+
+  table th {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+  }
+
+  table td {
+    font-size: 0.92rem;
+  }
 }
 
-/* Custom desktop scrollbar */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -46,7 +141,7 @@
 
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
-  border-radius: 4px;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -57,11 +152,6 @@
   background: #334155;
 }
 
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
-}
-
-/* Draggable desktop window header */
 .window-drag-region {
   -webkit-app-region: drag;
 }
@@ -70,26 +160,13 @@
   -webkit-app-region: no-drag;
 }
 
-/* Print Styles */
 @media print {
   body {
     background-color: white !important;
     color: black !important;
   }
   .no-print,
-  .window-drag-region,
-  aside,
-  nav,
-  footer,
-  button,
-  .print-hide {
+  .window-drag-region {
     display: none !important;
-  }
-  .print-container {
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-    box-shadow: none !important;
   }
 }

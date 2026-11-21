@@ -17,6 +17,9 @@ import { TimetableView } from './views/TimetableView';
 import { AccountsView } from './views/AccountsView';
 import { ReportsView } from './views/ReportsView';
 import { SettingsView } from './views/SettingsView';
+import { SyncCenterView } from './views/SyncCenterView';
+import { NoticesView } from './views/NoticesView';
+import { OnlineModuleView, ONLINE_MODULES } from './views/OnlineModuleView';
 import { LoginView } from './views/LoginView';
 import { SubscriptionExpiredView } from './views/SubscriptionExpiredView';
 import {
@@ -275,6 +278,29 @@ const AppContent: React.FC = () => {
                 </ErrorBoundary>
               )}
 
+              {ONLINE_MODULES[currentView] && (
+                <ErrorBoundary moduleName={ONLINE_MODULES[currentView].title} onNavigateHome={() => setCurrentView('dashboard')}>
+                  <OnlineModuleView moduleId={currentView} sessionToken={sessionToken} onBack={() => setCurrentView('dashboard')} />
+                </ErrorBoundary>
+              )}
+
+              {currentView === 'notices' && (
+                <ErrorBoundary moduleName="Notices" onNavigateHome={() => setCurrentView('dashboard')}>
+                  <NoticesView sessionToken={sessionToken} onBack={() => setCurrentView('dashboard')} />
+                </ErrorBoundary>
+              )}
+
+              {currentView === 'sync-center' && (
+                <ErrorBoundary moduleName="Sync Center" onNavigateHome={() => setCurrentView('dashboard')}>
+                  <SyncCenterView
+                    sessionToken={sessionToken}
+                    currentUser={currentUser}
+                    onBack={() => setCurrentView('dashboard')}
+                    onTriggerSync={handleTriggerSync}
+                  />
+                </ErrorBoundary>
+              )}
+
               {currentView === 'students' && (
                 <ErrorBoundary moduleName="Students & Admissions" onNavigateHome={() => setCurrentView('dashboard')}>
                   <StudentsView onBack={() => setCurrentView('dashboard')} sessionToken={sessionToken} />
@@ -283,7 +309,7 @@ const AppContent: React.FC = () => {
 
               {currentView === 'attendance' && (
                 <ErrorBoundary moduleName="Daily Attendance" onNavigateHome={() => setCurrentView('dashboard')}>
-                  <AttendanceView onBack={() => setCurrentView('dashboard')} sessionToken={sessionToken} />
+                  <AttendanceView onBack={() => setCurrentView('dashboard')} sessionToken={sessionToken} onOpenSyncCenter={() => setCurrentView('sync-center')} />
                 </ErrorBoundary>
               )}
 

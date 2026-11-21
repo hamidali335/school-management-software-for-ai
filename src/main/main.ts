@@ -81,10 +81,10 @@ if (!gotTheLock) {
 
       // 4. Create the native Windows application shell
       mainWindow = new BrowserWindow({
-        width: 1366,
-        height: 840,
-        minWidth: 1024,
-        minHeight: 640,
+        width: 1440,
+        height: 900,
+        minWidth: 1100,
+        minHeight: 700,
         title: 'School Management Software',
         backgroundColor: '#f8fafc',
         show: false,

@@ -10,6 +10,9 @@ import { migration008LicensingAndAutomatedBackups } from './008_licensing_and_au
 import { migration009PerformanceAndUpdates } from './009_performance_optimization_and_update_state';
 import { migration010SubscriptionCheckpointsAndSecurity } from './010_subscription_checkpoints_and_security';
 import { migration011RebuildSyncOutboxAndSeq } from './011_rebuild_sync_outbox_and_seq';
+import { migration012ReceiptBlocksAndPaymentLedger } from './012_receipt_blocks_and_payment_ledger';
+import { migration013OfflineMirrorAndNotices } from './013_offline_mirror_and_notices';
+import { migration014PermissionSnapshotExpiry } from './014_permission_snapshot_expiry';
 
 export const ALL_MIGRATIONS: Migration[] = [
   migration001CoreSchema,
@@ -23,6 +26,9 @@ export const ALL_MIGRATIONS: Migration[] = [
   migration009PerformanceAndUpdates,
   migration010SubscriptionCheckpointsAndSecurity,
   migration011RebuildSyncOutboxAndSeq,
+  migration012ReceiptBlocksAndPaymentLedger,
+  migration013OfflineMirrorAndNotices,
+  migration014PermissionSnapshotExpiry,
 ];
 
 export * from './migration-runner';

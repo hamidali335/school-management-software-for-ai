@@ -571,7 +571,7 @@ describe('School Management Software — Phase 9 Architecture Hardening, Subscri
   // SCENARIO 12 & 13: Subscription Expiry & Fail-Closed Protection
   // ───────────────────────────────────────────────────────────────────────────
 
-  it('Scenario 12: Subscription expires while desktop running — session revoked, keys locked, mutations blocked', () => {
+  it('Scenario 12: Subscription expires while desktop running — read-only mode preserved, mutations blocked', () => {
     // Unlock key manager
     keyManager.unlock();
     assert.strictEqual(keyManager.getStatus().isLocked, false);
@@ -585,11 +585,9 @@ describe('School Management Software — Phase 9 Architecture Hardening, Subscri
 
     assert.strictEqual(evalResult.isValid, false);
     assert.strictEqual(evalResult.state, 'expired');
-    assert.strictEqual(keyManager.getStatus().isLocked, true); // DEK locked & memory wiped
-
-    // Active sessions invalidated
-    const activeSessions = db.prepare('SELECT COUNT(*) as c FROM auth_sessions WHERE is_revoked = 0').get().c;
-    assert.strictEqual(activeSessions, 0);
+    // Approved Decision 1 (docs/ARCHITECTURE-ADDENDUM.md Section 11):
+    // Normal expiry enters read-only mode — key stays unlocked for queries, backup & export
+    assert.strictEqual(keyManager.getStatus().isLocked, false);
 
     // Write attempts fail closed
     assert.throws(() => {

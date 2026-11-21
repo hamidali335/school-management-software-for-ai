@@ -35,7 +35,8 @@ export const migration011RebuildSyncOutboxAndSeq: Migration = {
         schema_version INTEGER DEFAULT 1,
         local_version INTEGER DEFAULT 1,
         base_version INTEGER DEFAULT 1,
-        payload_json TEXT NOT NULL,
+        payload_json TEXT DEFAULT '{}',
+        payload TEXT,
         operation TEXT DEFAULT 'INSERT',
         status TEXT DEFAULT 'pending',
         state TEXT NOT NULL CHECK(state IN ('pending', 'processing', 'retrying', 'synced', 'conflict', 'needs_attention')) DEFAULT 'pending',
@@ -72,6 +73,8 @@ export const migration011RebuildSyncOutboxAndSeq: Migration = {
         UPDATE sync_outbox SET 
           event_id = COALESCE(NEW.event_id, NEW.operation_id),
           operation_id = COALESCE(NEW.operation_id, NEW.event_id),
+          payload_json = CASE WHEN (NEW.payload_json IS NULL OR NEW.payload_json = '' OR NEW.payload_json = '{}') AND NEW.payload IS NOT NULL THEN NEW.payload ELSE NEW.payload_json END,
+          payload = CASE WHEN NEW.payload IS NULL AND NEW.payload_json IS NOT NULL THEN NEW.payload_json ELSE NEW.payload END,
           state = CASE WHEN NEW.status IN ('pending', 'processing', 'retrying', 'synced', 'conflict', 'needs_attention') THEN NEW.status ELSE NEW.state END
         WHERE id = NEW.id;
       END;

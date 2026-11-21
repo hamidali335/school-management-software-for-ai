@@ -470,9 +470,9 @@ export class FeeRepository {
         i.previous_dues, i.paid_amount, i.balance, i.discount_amount,
         CASE WHEN i.is_cancelled = 1 THEN 'cancelled' ELSE i.status END as status,
         i.is_cancelled as isCancelled, i.cancelled_at as cancelledAt, i.cancellation_reason as cancellationReason,
-        s.full_name as student_name, s.admission_number, c.name as class_name
+        COALESCE(s.full_name, 'Student #' || substr(i.student_id, -6)) as student_name, COALESCE(s.admission_number, '—') as admission_number, c.name as class_name
       FROM invoices i
-      JOIN students s ON i.student_id = s.id AND i.school_id = s.school_id
+      LEFT JOIN students s ON i.student_id = s.id AND i.school_id = s.school_id
       LEFT JOIN student_enrollments e ON s.id = e.student_id AND i.session_id = e.session_id
       LEFT JOIN classes c ON e.class_id = c.id
       WHERE i.school_id = ?
@@ -490,10 +490,10 @@ export class FeeRepository {
 
   public getInvoiceDetails(schoolId: string, invoiceId: string) {
     const invoice = this.db.prepare(`
-      SELECT i.*, s.full_name as student_name, s.admission_number, s.father_name, s.phone as student_phone,
+      SELECT i.*, COALESCE(s.full_name, 'Student #' || substr(i.student_id, -6)) as student_name, COALESCE(s.admission_number, '—') as admission_number, s.father_name, s.phone as student_phone,
              c.name as class_name, sec.name as section_name, ses.name as session_name
       FROM invoices i
-      JOIN students s ON i.student_id = s.id AND i.school_id = s.school_id
+      LEFT JOIN students s ON i.student_id = s.id AND i.school_id = s.school_id
       LEFT JOIN student_enrollments e ON s.id = e.student_id AND i.session_id = e.session_id
       LEFT JOIN classes c ON e.class_id = c.id
       LEFT JOIN sections sec ON e.section_id = sec.id
@@ -534,11 +534,11 @@ export class FeeRepository {
     let sql = `
       SELECT i.id as invoiceId, i.challan_number as challanNumber, i.month, i.due_date as dueDate,
              i.amount, i.paid_amount as paidAmount, i.balance, i.status,
-             s.id as studentId, s.full_name as studentName, s.admission_number as admissionNumber,
+             COALESCE(s.id, i.student_id) as studentId, COALESCE(s.full_name, 'Student #' || substr(i.student_id, -6)) as studentName, COALESCE(s.admission_number, '—') as admissionNumber,
              s.phone as studentPhone, c.name as className, sec.name as sectionName,
              g.full_name as guardianName, g.phone as guardianPhone
       FROM invoices i
-      JOIN students s ON i.student_id = s.id AND i.school_id = s.school_id
+      LEFT JOIN students s ON i.student_id = s.id AND i.school_id = s.school_id
       LEFT JOIN student_enrollments e ON s.id = e.student_id AND i.session_id = e.session_id
       LEFT JOIN classes c ON e.class_id = c.id
       LEFT JOIN sections sec ON e.section_id = sec.id

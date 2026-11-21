@@ -150,7 +150,7 @@ describe('School Management Software — Phase 6 Automated Backups & Safe Restor
     assert.strictEqual(headerBytes.toString('utf8'), 'SMSBAK01');
   });
 
-  it('3. Creates a cloud backup and verifies through mock backend storage', async () => {
+  it('3. Creates a cloud backup and verifies through mock backend storage [mocked network]', async () => {
     const entry = await backupService.createBackup({
       destinationType: 'cloud',
       triggerType: 'scheduled',

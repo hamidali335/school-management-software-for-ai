@@ -39,6 +39,8 @@ const VIEW_TITLES: Record<string, { title: string; subtitle: string }> = {
   accounts: { title: 'Accounts & Expenses', subtitle: 'Cash flow balance, fee revenue and institutional vouchers' },
   reports: { title: 'Reports & Export', subtitle: 'Official institutional registers, PDF exports and gazettes' },
   settings: { title: 'System & Settings', subtitle: 'Institution profile, licensing, backups and sync' },
+  'sync-center': { title: 'Sync Center', subtitle: 'Pending offline queue, attention items, and conflicts' },
+  notices: { title: 'Notices & Announcements', subtitle: 'Institutional notices and announcements' },
 };
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -77,42 +79,14 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   };
 
   return (
-    <header className="h-14 w-full bg-white dark:bg-slate-900 border-b border-slate-200/90 dark:border-slate-800 px-5 flex items-center justify-between select-none z-20 shrink-0 transition-colors">
+    <header className="h-16 w-full bg-white dark:bg-slate-900 border-b border-slate-200/90 dark:border-slate-800 px-5 flex items-center justify-between select-none z-20 shrink-0 transition-colors">
       {/* Left: Breadcrumbs & Page Title */}
       <div className="flex items-center space-x-3 min-w-0">
-        {currentView !== 'dashboard' && (
-          <button
-            type="button"
-            onClick={() => onNavigate('dashboard')}
-            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition"
-            title="Return to Dashboard"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-        )}
 
-        <div className="flex flex-col min-w-0">
-          <div className="flex items-center space-x-1.5 text-xs text-slate-400 dark:text-slate-500 font-medium leading-none">
-            <button
-              type="button"
-              onClick={() => onNavigate('dashboard')}
-              className="hover:text-indigo-600 transition"
-            >
-              School
-            </button>
-            <span>/</span>
-            <span className="font-semibold text-slate-800 dark:text-slate-200 capitalize truncate">
-              {viewMeta.title}
-            </span>
-          </div>
-          <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-sm hidden sm:inline">
-            {viewMeta.subtitle}
-          </span>
         </div>
-      </div>
 
       {/* Center: Global Search Bar */}
-      <div className="hidden md:flex items-center max-w-md w-full mx-4">
+      <div className="hidden md:flex items-center max-w-2xl w-full mx-4">
         <form onSubmit={handleSearchSubmit} className="relative w-full">
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
@@ -144,7 +118,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               setQuickActionOpen(!quickActionOpen);
               setNotifOpen(false);
             }}
-            className="hidden sm:inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 transition"
+            className="hidden sm:inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 transition"
           >
             <PlusCircle className="w-3.5 h-3.5" />
             <span>Actions</span>
@@ -155,7 +129,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             <>
               <div className="fixed inset-0 z-40" onClick={() => setQuickActionOpen(false)} />
               <div className="absolute right-0 mt-1.5 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl py-1.5 z-50 animate-in fade-in duration-150">
-                <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <div className="px-3 py-1 text-xs font-bold text-slate-400 uppercase tracking-wider">
                   Quick Operations
                 </div>
                 <button
@@ -197,13 +171,13 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </div>
 
         {/* Academic Session Pill */}
-        <span className="hidden xl:inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700">
+        <span className="hidden xl:inline-flex items-center px-2.5 py-1 rounded-full text-[13px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700">
           {APP_METADATA.DEFAULT_SESSION_NAME}
         </span>
 
         {/* Network Connectivity Pill */}
         <div
-          className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+          className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-sm font-semibold border ${
             isOnline
               ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
               : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60'
@@ -215,22 +189,41 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           ) : (
             <WifiOff className="w-3 h-3 text-amber-600 dark:text-amber-400" />
           )}
-          <span className="text-[11px] hidden sm:inline">
+          <span className="text-[13px] hidden sm:inline">
             {isOnline ? 'Cloud Online' : 'Offline Mode'}
           </span>
         </div>
 
-        {/* Sync Status Button */}
+        {/* Sync Status Indicator -> Opens Sync Center (Section 6.11) */}
         <button
           type="button"
-          onClick={onTriggerSync}
-          disabled={isSyncing}
-          className="flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition disabled:opacity-50"
-          title={pendingCount > 0 ? `${pendingCount} changes waiting to sync` : 'All changes up to date'}
+          onClick={() => onNavigate('sync-center')}
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border transition ${
+            conflictCount > 0
+              ? 'bg-[#FFF1F2] text-[#BE123C] border-rose-200'
+              : syncStatus?.state === 'error'
+                ? 'bg-[#FFF1F2] text-[#BE123C] border-rose-200'
+                : !isOnline
+                  ? 'bg-[#FFFBEB] text-[#B45309] border-amber-200'
+                  : pendingCount > 0
+                    ? 'bg-[#EEF2FF] text-[#4F46E5] border-indigo-200'
+                    : 'bg-[#ECFDF5] text-[#047857] border-emerald-200'
+          }`}
+          title="Open Sync Center"
         >
-          <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin text-indigo-600' : 'text-slate-500'}`} />
-          <span className="text-[11px]">
-            {isSyncing ? 'Syncing...' : pendingCount > 0 ? `Sync (${pendingCount})` : 'Synced'}
+          <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+          <span className="text-[13px]">
+            {isSyncing && !syncStatus?.lastSyncAt
+              ? 'Initial sync'
+              : conflictCount > 0
+                ? 'Conflict'
+                : syncStatus?.state === 'error'
+                  ? 'Failed'
+                  : !isOnline
+                    ? 'Offline'
+                    : pendingCount > 0
+                      ? `Pending (${pendingCount})`
+                      : 'Synced'}
           </span>
         </button>
 
@@ -257,7 +250,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <div className="absolute right-0 mt-1.5 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl p-3 z-50 animate-in fade-in duration-150">
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-2">
                   <h4 className="text-xs font-bold text-slate-900 dark:text-white">System Status</h4>
-                  <span className="text-[10px] text-slate-400">Institutional Feed</span>
+                  <span className="text-xs text-slate-400">Institutional Feed</span>
                 </div>
 
                 <div className="space-y-2 text-xs">
@@ -267,7 +260,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                       <p className="font-semibold text-slate-800 dark:text-slate-200">
                         Workstation Active
                       </p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      <p className="text-[13px] text-slate-500 dark:text-slate-400">
                         Encrypted database ready for all school operations.
                       </p>
                     </div>
@@ -286,7 +279,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                         <p className="font-semibold text-rose-800 dark:text-rose-300">
                           Synchronization Notice
                         </p>
-                        <p className="text-[11px] text-rose-700 dark:text-rose-400">
+                        <p className="text-[13px] text-rose-700 dark:text-rose-400">
                           {conflictCount} conflict awaiting resolution in Settings.
                         </p>
                       </div>
@@ -300,7 +293,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                         <p className="font-semibold text-amber-800 dark:text-amber-300">
                           Pending Changes
                         </p>
-                        <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                        <p className="text-[13px] text-amber-700 dark:text-amber-400">
                           {pendingCount} operation(s) waiting to sync with central server.
                         </p>
                       </div>

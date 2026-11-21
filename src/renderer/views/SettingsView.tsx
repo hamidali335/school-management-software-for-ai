@@ -582,23 +582,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6 text-sm font-semibold">
+      {/* Tabs — single-line horizontal bar */}
+      <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-200 dark:border-slate-800 pb-px text-sm font-semibold">
         <button
           onClick={() => setActiveTab('profile')}
-          className={`pb-3 transition-colors ${activeTab === 'profile' ? 'border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
+          className={`inline-flex items-center gap-2 whitespace-nowrap shrink-0 px-3 py-2.5 border-b-2 transition-colors ${activeTab === 'profile' ? 'border-[#1B2A59] text-[#1B2A59] dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
         >
-          School Profile & Challan
+          <Building2 className="w-4 h-4 shrink-0" />
+          <span>School Profile</span>
         </button>
         <button
           onClick={() => setActiveTab('licensing')}
-          className={`pb-3 transition-colors flex items-center gap-1.5 ${activeTab === 'licensing' ? 'border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
+          className={`inline-flex items-center gap-2 whitespace-nowrap shrink-0 px-3 py-2.5 border-b-2 transition-colors ${activeTab === 'licensing' ? 'border-[#1B2A59] text-[#1B2A59] dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
         >
-          <Key className="w-4 h-4" />
-          <span>Subscription & Licensing</span>
+          <Key className="w-4 h-4 shrink-0" />
+          <span>Licensing</span>
           {licenseStatus && licenseStatus.state !== 'active' && (
             <span
-              className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+              className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
                 licenseStatus.state === 'offline_grace'
                   ? 'bg-amber-500 text-white'
                   : 'bg-rose-600 text-white'
@@ -610,36 +611,38 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </button>
         <button
           onClick={() => setActiveTab('backup')}
-          className={`pb-3 transition-colors flex items-center gap-1.5 ${activeTab === 'backup' ? 'border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
+          className={`inline-flex items-center gap-2 whitespace-nowrap shrink-0 px-3 py-2.5 border-b-2 transition-colors ${activeTab === 'backup' ? 'border-[#1B2A59] text-[#1B2A59] dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
         >
-          <HardDrive className="w-4 h-4" />
-          <span>Automated Backup & Restore</span>
+          <HardDrive className="w-4 h-4 shrink-0" />
+          <span>Backups & Restore</span>
         </button>
         <button
           onClick={() => setActiveTab('updates')}
-          className={`pb-3 transition-colors flex items-center gap-1.5 ${activeTab === 'updates' ? 'border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
+          className={`inline-flex items-center gap-2 whitespace-nowrap shrink-0 px-3 py-2.5 border-b-2 transition-colors ${activeTab === 'updates' ? 'border-[#1B2A59] text-[#1B2A59] dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
         >
-          <HardDriveDownload className="w-4 h-4" />
-          <span>Application Updates</span>
+          <HardDriveDownload className="w-4 h-4 shrink-0" />
+          <span>Updates</span>
           {updateStatus?.state === 'update_available' && (
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-500 text-white">
+            <span className="px-1.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500 text-white">
               v{updateStatus.availableUpdate?.version}
             </span>
           )}
         </button>
         <button
           onClick={() => setActiveTab('security')}
-          className={`pb-3 transition-colors ${activeTab === 'security' ? 'border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
+          className={`inline-flex items-center gap-2 whitespace-nowrap shrink-0 px-3 py-2.5 border-b-2 transition-colors ${activeTab === 'security' ? 'border-[#1B2A59] text-[#1B2A59] dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
         >
-          Administrator Password
+          <Lock className="w-4 h-4 shrink-0" />
+          <span>Password</span>
         </button>
         <button
           onClick={() => setActiveTab('sync')}
-          className={`pb-3 transition-colors flex items-center gap-1.5 ${activeTab === 'sync' ? 'border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
+          className={`inline-flex items-center gap-2 whitespace-nowrap shrink-0 px-3 py-2.5 border-b-2 transition-colors ${activeTab === 'sync' ? 'border-[#1B2A59] text-[#1B2A59] dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
         >
-          <span>Cloud Sync & Conflicts</span>
+          <RefreshCw className="w-4 h-4 shrink-0" />
+          <span>Cloud Sync</span>
           {conflicts.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-rose-600 text-white font-bold animate-pulse">
+            <span className="px-1.5 py-0.5 rounded-full text-xs bg-rose-600 text-white font-bold animate-pulse">
               {conflicts.length}
             </span>
           )}
@@ -787,13 +790,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg">
                   <span className="text-slate-500 dark:text-slate-400 block mb-1">Authorized School</span>
                   <strong className="text-slate-800 dark:text-slate-200 block truncate">{licenseStatus.schoolName}</strong>
-                  <span className="font-mono text-[10px] text-slate-400">Code: {licenseStatus.schoolCode}</span>
+                  <span className="font-mono text-xs text-slate-400">Code: {licenseStatus.schoolCode}</span>
                 </div>
 
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg">
                   <span className="text-slate-500 dark:text-slate-400 block mb-1">Bound Device Identity</span>
                   <strong className="text-slate-800 dark:text-slate-200 block font-mono truncate">{licenseStatus.deviceId}</strong>
-                  <span className="font-mono text-[10px] text-slate-400">Grace: {licenseStatus.gracePeriodDays} Days</span>
+                  <span className="font-mono text-xs text-slate-400">Grace: {licenseStatus.gracePeriodDays} Days</span>
                 </div>
 
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg">
@@ -801,7 +804,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <strong className="text-slate-800 dark:text-slate-200 block font-mono">
                     {licenseStatus.expiresAt ? new Date(licenseStatus.expiresAt).toLocaleDateString() : 'N/A'}
                   </strong>
-                  <span className="text-[10px] text-slate-400">
+                  <span className="text-xs text-slate-400">
                     Remaining: {licenseStatus.graceDaysRemaining} Days
                   </span>
                 </div>
@@ -813,7 +816,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       ? new Date(licenseStatus.lastServerVerification).toLocaleString()
                       : 'Never'}
                   </strong>
-                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Authoritative Cloud Timestamp</span>
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">Authoritative Cloud Timestamp</span>
                 </div>
               </div>
             )}
@@ -851,7 +854,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         ) : (
                           <AlertTriangle className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                         )}
-                        <span className="text-[11px] truncate">{feat.label}</span>
+                        <span className="text-sm truncate">{feat.label}</span>
                       </div>
                     );
                   })}
@@ -899,7 +902,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </Badge>
                 </div>
 
-                <div className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
+                <div className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
                   <div>Path: <span className="font-mono text-slate-800 dark:text-slate-200 break-all">{dest.destinationPath || 'Auto'}</span></div>
                   <div>Retention: <span className="font-semibold text-slate-800 dark:text-slate-200">{dest.retentionCount} Copies</span></div>
                   <div>Last Backup: <span className="font-mono text-slate-800 dark:text-slate-200">{dest.lastBackupAt ? new Date(dest.lastBackupAt).toLocaleString() : 'Never'}</span></div>
@@ -992,11 +995,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   ) : (
                     backupHistoryList.map((entry) => (
                       <tr key={entry.backupId} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <td className="p-2.5 font-mono text-[11px] text-indigo-600 dark:text-indigo-400">{entry.backupId.substring(0, 16)}...</td>
-                        <td className="p-2.5 font-bold uppercase text-[10px] text-slate-700 dark:text-slate-300">{entry.destinationType}</td>
+                        <td className="p-2.5 font-mono text-sm text-indigo-600 dark:text-indigo-400">{(entry.backupId || '').substring(0, 16)}...</td>
+                        <td className="p-2.5 font-bold uppercase text-xs text-slate-700 dark:text-slate-300">{entry.destinationType}</td>
                         <td className="p-2.5 font-mono text-slate-700 dark:text-slate-300">{entry.fileName}</td>
                         <td className="p-2.5 font-mono text-slate-600 dark:text-slate-400">{(entry.fileSizeBytes / 1024).toFixed(1)} KB</td>
-                        <td className="p-2.5 font-mono text-slate-400 text-[10px]">{entry.checksumSha256.substring(0, 12)}...</td>
+                        <td className="p-2.5 font-mono text-slate-400 text-xs">{(entry.checksumSha256 || '').substring(0, 12)}...</td>
                         <td className="p-2.5">
                           <Badge variant={entry.status === 'completed' || entry.status === 'verified' ? 'success' : entry.status === 'restored' ? 'neutral' : 'danger'}>
                             {entry.status}
@@ -1065,7 +1068,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 Sandbox Verification Passed: Integrity Status "OK"
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-700 dark:text-slate-300">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-700 dark:text-slate-300">
                 <div>Migration Version: <strong className="font-mono text-slate-900 dark:text-white">{restorePreview.schemaVersion} ({restorePreview.migrationCount} migrations)</strong></div>
                 <div>Students Record Count: <strong className="font-mono text-slate-900 dark:text-white">{restorePreview.recordCounts.students}</strong></div>
                 <div>Fee Invoices Count: <strong className="font-mono text-slate-900 dark:text-white">{restorePreview.recordCounts.invoices}</strong></div>
@@ -1154,13 +1157,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             {/* Current Release Details */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 rounded-xl space-y-1">
-                <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Installed Version</div>
+                <div className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase">Installed Version</div>
                 <div className="text-lg font-bold text-slate-900 dark:text-white">v{updateStatus?.currentVersion || appInfo?.version || '1.0.0'}</div>
-                <div className="text-[10px] text-slate-500 dark:text-slate-400">Commercial Desktop Build</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Commercial Desktop Build</div>
               </div>
 
               <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 rounded-xl space-y-1">
-                <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Update Channel</div>
+                <div className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase">Update Channel</div>
                 <div className="flex items-center gap-2">
                   <select
                     value={updateStatus?.channel || 'stable'}
@@ -1171,23 +1174,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <option value="beta">Beta / Early Access</option>
                   </select>
                 </div>
-                <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                <div className="text-xs text-slate-500 dark:text-slate-400">
                   {updateStatus?.channel === 'stable' ? 'Production verified releases' : 'Pre-release testing channel'}
                 </div>
               </div>
 
               <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 rounded-xl space-y-1">
-                <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Target Platform</div>
+                <div className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase">Target Platform</div>
                 <div className="text-sm font-bold text-slate-900 dark:text-white">Windows 10 / 11 (x64)</div>
-                <div className="text-[10px] text-slate-500 dark:text-slate-400">NSIS Professional Installer</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">NSIS Professional Installer</div>
               </div>
 
               <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 rounded-xl space-y-1">
-                <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Last Checked</div>
+                <div className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase">Last Checked</div>
                 <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                   {updateStatus?.lastCheckedAt ? new Date(updateStatus.lastCheckedAt).toLocaleString() : 'Never checked'}
                 </div>
-                <div className="text-[10px] text-slate-500 dark:text-slate-400">Authoritative feed status</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Authoritative feed status</div>
               </div>
             </div>
           </div>
@@ -1207,7 +1210,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <p className="text-xs text-slate-600 dark:text-slate-300">
                       Released: {new Date(updateStatus.availableUpdate.releaseDate).toLocaleDateString()} • Size: {(updateStatus.availableUpdate.windows.sizeBytes / (1024 * 1024)).toFixed(1)} MB
                       {updateStatus.availableUpdate.mandatory && (
-                        <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-600 text-white">
+                        <span className="ml-2 px-1.5 py-0.5 rounded text-xs font-bold bg-rose-600 text-white">
                           Mandatory Update
                         </span>
                       )}
@@ -1243,7 +1246,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
               {/* Release Notes */}
               <div className="border border-indigo-100 dark:border-indigo-900 bg-white/80 dark:bg-slate-850/80 rounded-lg p-3 space-y-1">
-                <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase">Release Notes:</div>
+                <div className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase">Release Notes:</div>
                 <div className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-line font-mono max-h-32 overflow-y-auto">
                   {updateStatus.availableUpdate.releaseNotes}
                 </div>
@@ -1315,7 +1318,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </Button>
               </div>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               Default points to the authorized School OS central backend update endpoint.
             </p>
           </div>
@@ -1394,7 +1397,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
                 <div className="py-2 flex justify-between">
                   <span className="text-slate-500 dark:text-slate-400">Database File</span>
-                  <span className="font-mono text-[11px] text-slate-700 dark:text-slate-300 truncate max-w-[200px]" title={dbStatus?.path}>
+                  <span className="font-mono text-sm text-slate-700 dark:text-slate-300 truncate max-w-[200px]" title={dbStatus?.path}>
                     {dbStatus?.path || 'school_local.db'}
                   </span>
                 </div>
@@ -1515,7 +1518,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         <span className="text-slate-400">|</span>
                         <span className="text-slate-600 dark:text-slate-400">{cnf.conflictReason}</span>
                       </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                      <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                         Conflicting Fields: <strong className="text-rose-700 dark:text-rose-400">{cnf.conflictingFields.join(', ')}</strong> | Detected: {cnf.createdAt}
                       </div>
                     </div>
@@ -1563,7 +1566,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {syncHistory.map((h) => (
                       <tr key={h.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <td className="py-2 px-3 font-mono text-[11px] text-slate-700 dark:text-slate-300">{h.runId.substring(0, 12)}...</td>
+                        <td className="py-2 px-3 font-mono text-sm text-slate-700 dark:text-slate-300">{((h as any).runId || (h as any).run_id || (h as any).id || '').substring(0, 12)}...</td>
                         <td className="py-2 px-3 font-medium capitalize text-slate-700 dark:text-slate-300">{h.direction}</td>
                         <td className="py-2 px-3">
                           <Badge variant={h.status === 'success' ? 'success' : h.status === 'conflict' ? 'warning' : 'danger'}>
@@ -1573,7 +1576,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         <td className="py-2 px-3 text-right font-mono text-slate-800 dark:text-slate-200">{h.uploadedCount}</td>
                         <td className="py-2 px-3 text-right font-mono text-slate-800 dark:text-slate-200">{h.downloadedCount}</td>
                         <td className="py-2 px-3 text-right font-mono text-rose-600 dark:text-rose-400 font-bold">{h.conflictCount}</td>
-                        <td className="py-2 px-3 text-slate-500 dark:text-slate-400 text-[11px]">{h.startedAt}</td>
+                        <td className="py-2 px-3 text-slate-500 dark:text-slate-400 text-sm">{h.startedAt}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1606,7 +1609,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <span>Local Workstation Version</span>
                   <Badge variant="primary">v{selectedConflict.localVersion}</Badge>
                 </div>
-                <pre className="p-2 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700 text-[11px] font-mono overflow-auto max-h-48 text-slate-800 dark:text-slate-200">
+                <pre className="p-2 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700 text-sm font-mono overflow-auto max-h-48 text-slate-800 dark:text-slate-200">
                   {JSON.stringify(selectedConflict.localPayload, null, 2)}
                 </pre>
               </div>
@@ -1616,14 +1619,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <span>Remote Central Server Version</span>
                   <Badge variant="neutral">v{selectedConflict.remoteVersion}</Badge>
                 </div>
-                <pre className="p-2 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700 text-[11px] font-mono overflow-auto max-h-48 text-slate-800 dark:text-slate-200">
+                <pre className="p-2 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700 text-sm font-mono overflow-auto max-h-48 text-slate-800 dark:text-slate-200">
                   {JSON.stringify(selectedConflict.remotePayload, null, 2)}
                 </pre>
               </div>
             </div>
 
             <div className="border-t border-slate-200 dark:border-slate-800 pt-4 flex items-center justify-between">
-              <span className="text-slate-500 dark:text-slate-400 text-[11px]">Select resolution rule to apply to local database:</span>
+              <span className="text-slate-500 dark:text-slate-400 text-sm">Select resolution rule to apply to local database:</span>
               <div className="flex gap-2">
                 <Button
                   variant="secondary"

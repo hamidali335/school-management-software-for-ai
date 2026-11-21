@@ -342,8 +342,10 @@ export interface DesktopAPI {
   collectFee: (token: string, payment: any) => Promise<{ success: boolean; data?: any; error?: string }>;
   reverseFee: (token: string, paymentId: string, reason: string) => Promise<{ success: boolean; restoredBalance?: number; error?: string }>;
   getFeeStructures: (token: string, sessionId?: string) => Promise<any[]>;
+  listFeeStructures: (token: string, sessionId?: string) => Promise<any[]>;
   createFeeStructure: (token: string, input: any) => Promise<{ success: boolean; data?: any; error?: string }>;
   getConcessions: (token: string, studentId?: string) => Promise<any[]>;
+  listConcessions: (token: string, studentId?: string) => Promise<any[]>;
   createConcession: (token: string, input: any) => Promise<{ success: boolean; data?: any; error?: string }>;
   revokeConcession: (token: string, concessionId: string) => Promise<{ success: boolean; error?: string }>;
   bulkGenerateInvoices: (token: string, input: { sessionId: string; classId: string; month: string; dueDate: string }) => Promise<{ success: boolean; generatedCount?: number; skippedCount?: number; error?: string }>;
@@ -399,6 +401,17 @@ export interface DesktopAPI {
   exportPdfReport?: (token: string, reportData: any) => Promise<{ success: boolean; filePath?: string; canceled?: boolean; error?: string }>;
   exportExcelReport?: (token: string, reportData: any) => Promise<{ success: boolean; filePath?: string; canceled?: boolean; error?: string }>;
   getSyncQueue: (token: string) => Promise<any[]>;
+  getSyncCenterData: (token: string) => Promise<any>;
+  keepServerVersion: (token: string, input: any) => Promise<{ success: boolean; error?: string }>;
+  retryOutboxItem: (token: string, input: any) => Promise<{ success: boolean; error?: string }>;
+  getReceiptBlockStatus: (token: string, series?: string) => Promise<any>;
+  issueOfflineReceipt: (token: string, series?: string) => Promise<any>;
+  collectFeeOfflineSafe: (token: string, input: any) => Promise<any>;
+  reverseFeeOnlineOnly: (token: string, input: any) => Promise<any>;
+  getMirrorRecords: (token: string, entityType: string) => Promise<any[]>;
+  onlineRequest: (token: string, opts: any) => Promise<{ ok: boolean; status: number; data?: any; error?: string }>;
+  listNotices: (token: string) => Promise<any[]>;
+  createNotice: (token: string, input: { title: string; body: string; roles: string[] }) => Promise<{ ok: boolean; error?: string; data?: any }>;
   getAuditLogs: (token: string) => Promise<any[]>;
 
   // Licensing & Activation

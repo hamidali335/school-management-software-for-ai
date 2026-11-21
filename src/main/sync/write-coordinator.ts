@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import crypto from 'node:crypto';
 import { ISyncApiClient, SyncPushEvent, SyncHttpError } from './sync-api-client';
 import { CredentialVault } from '../security/credential-vault';
+import { CloudTokenManager } from '../security/cloud-token-manager';
 import { setApplyingRemoteChanges } from './change-tracker';
 
 export interface DispatchMutationOptions<T> {
@@ -140,7 +141,21 @@ export class WriteCoordinator {
           createdAt: new Date().toISOString(),
         };
 
-        const pushRes = await this.apiClient.pushBatch(targetSchoolId, deviceId, [pushEvent], authToken);
+        let pushRes;
+        try {
+          pushRes = await this.apiClient.pushBatch(targetSchoolId, deviceId, [pushEvent], authToken);
+        } catch (pushErr: any) {
+          if (pushErr instanceof SyncHttpError && pushErr.status === 401) {
+            const refreshed = await CloudTokenManager.refreshAccessToken(this.db);
+            if (refreshed) {
+              pushRes = await this.apiClient.pushBatch(targetSchoolId, deviceId, [pushEvent], refreshed);
+            } else {
+              throw pushErr;
+            }
+          } else {
+            throw pushErr;
+          }
+        }
 
         if (pushRes && pushRes.events && pushRes.events.length > 0) {
           const ack = pushRes.events[0];

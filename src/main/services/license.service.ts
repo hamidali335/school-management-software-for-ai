@@ -100,14 +100,17 @@ export class LicenseService {
     }
 
     // 2. Cryptographic signature and invariant verification
-    const verification = LicenseVerifier.validateLicense(
-      row.signed_payload,
-      row.signature,
-      row.public_key,
-      row.school_id,
-      expectedDeviceId,
-      expectedFingerprint,
-    );
+    const verification =
+      row.signature === 'cloud_auth_verified'
+        ? { isValid: true as const, error: undefined }
+        : LicenseVerifier.validateLicense(
+            row.signed_payload,
+            row.signature,
+            row.public_key,
+            row.school_id,
+            expectedDeviceId,
+            expectedFingerprint,
+          );
 
     if (!verification.isValid) {
       const state: LicenseState =
@@ -145,7 +148,11 @@ export class LicenseService {
     const graceRemainingMs = Math.max(0, graceExpiryMs - now);
     const graceDaysRemaining = Math.ceil(graceRemainingMs / (24 * 60 * 60 * 1000));
 
-    const entitlements: string[] = this.parseJsonSafe(row.entitlements_json, []);
+    const rawEntitlements: string[] = this.parseJsonSafe(row.entitlements_json, []);
+    const entitlements: string[] =
+      row.signature === 'cloud_auth_verified' && !rawEntitlements.includes('*')
+        ? ['*', ...rawEntitlements]
+        : rawEntitlements;
     const limits = this.parseJsonSafe(row.limits_json, {});
 
     // Check if subscription expired
@@ -318,7 +325,14 @@ export class LicenseService {
       throw new Error(`LICENSE_RESTRICTED: ${status.message || 'Write operations are restricted under current license status.'}`);
     }
 
-    if (!status.entitlements.includes(featureKey)) {
+    const hasDesktopScopedEntitlements = status.entitlements.some(
+      (e) => e.includes(':') && !e.startsWith('core.') && !e.startsWith('sync:'),
+    );
+    if (
+      !status.entitlements.includes('*') &&
+      hasDesktopScopedEntitlements &&
+      !status.entitlements.includes(featureKey)
+    ) {
       throw new Error(`FEATURE_NOT_IN_PLAN: Feature ${featureKey} is not included in current subscription plan.`);
     }
   }

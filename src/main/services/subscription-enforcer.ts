@@ -101,21 +101,22 @@ export class SubscriptionEnforcer {
     const isDeviceMismatch = status.state === 'device_mismatch';
     const isUnactivated = status.state === 'unactivated';
 
-    const shouldLock = isExpired || isGraceExpired || isClockTampered || isRevoked || isDeviceMismatch || isUnactivated;
+    // Approved Decision 1 (docs/ARCHITECTURE-ADDENDUM.md Section 11):
+    // - Clock tampering, revoked license, or device mismatch -> fail-closed (lock SQLCipher key until online revalidation).
+    // - Normal subscription expiry / grace expiry -> read-only mode (key stays unlocked; backup & export remain available; no writes or sync).
+    const mustLockKey = isClockTampered || isRevoked || isDeviceMismatch;
+    const isReadOnlyExpired = (isExpired || isGraceExpired) && !mustLockKey;
 
-    if (shouldLock) {
+    if (mustLockKey) {
       this.isExpiredOrTampered = true;
 
-      // 1. Lock database encryption key immediately
-      const reason = isClockTampered ? 'CLOCK_TAMPERED' : 'SUBSCRIPTION_EXPIRED';
+      const reason = isClockTampered ? 'CLOCK_TAMPERED' : isRevoked ? 'LICENSE_REVOKED' : 'DEVICE_MISMATCH';
       this.keyManager.lock(reason);
 
-      // 2. Invalidate all active local application sessions
       try {
         SessionManager.revokeAllSessions(this.db);
       } catch {}
 
-      // 3. Notify renderer windows
       this.broadcastToRenderers('subscription:status-changed', status);
 
       return {
@@ -123,7 +124,22 @@ export class SubscriptionEnforcer {
         state: status.state,
         expiresAt: status.expiresAt,
         serverTime: status.lastServerVerification,
-        message: status.message || 'Subscription expired or integrity violation detected.',
+        message: status.message || 'License integrity violation detected. Online revalidation required.',
+        requiresOnlineRenewal: true,
+      };
+    }
+
+    if (isReadOnlyExpired) {
+      this.isExpiredOrTampered = true;
+      // Preserve read-only access for local data, backup, and export (do NOT lock SQLCipher key or delete local data)
+      this.broadcastToRenderers('subscription:status-changed', { ...status, readOnly: true, canBackup: true, canExport: true });
+
+      return {
+        isValid: false,
+        state: status.state,
+        expiresAt: status.expiresAt,
+        serverTime: status.lastServerVerification,
+        message: status.message || 'Subscription expired. Application is in read-only mode; backup and export remain available.',
         requiresOnlineRenewal: true,
       };
     }
