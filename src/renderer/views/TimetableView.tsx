@@ -62,7 +62,7 @@ export const TimetableView: React.FC<TimetableViewProps> = ({ onBack, sessionTok
       try {
         const [clsList, staffList, sessList] = await Promise.all([
           window.desktopAPI.getClasses(sessionToken),
-          window.desktopAPI.getStaff(sessionToken, { isTeaching: true }),
+          window.desktopAPI.getStaff(sessionToken),
           window.desktopAPI.getAcademicSessions(sessionToken),
         ]);
         setClasses(clsList);

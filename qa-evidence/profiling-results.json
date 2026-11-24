@@ -1,17 +1,17 @@
 {
-  "keyUnsealMs": 6.7514,
-  "dbInitAndSeedMs": 110.0596,
-  "totalStartupMs": 116.811,
-  "authLatencyMs": 65.9938,
-  "avgStudentQueryMs": 0.123838,
+  "keyUnsealMs": 8.258,
+  "dbInitAndSeedMs": 115.4726,
+  "totalStartupMs": 123.7306,
+  "authLatencyMs": 66.008,
+  "avgStudentQueryMs": 0.11637600000000001,
   "memReport": {
-    "rssMb": "51.95",
-    "heapTotalMb": "11.29",
-    "heapUsedMb": "6.83",
+    "rssMb": "52.01",
+    "heapTotalMb": "11.04",
+    "heapUsedMb": "6.89",
     "externalMb": "2.08"
   },
-  "reportGenMs": 0.296,
-  "csvMs": 0.1072,
-  "closeMs": 4.7562,
-  "timestamp": "2026-11-20T11:48:58.855Z"
+  "reportGenMs": 0.4687,
+  "csvMs": 0.1895,
+  "closeMs": 4.3317,
+  "timestamp": "2026-11-22T15:32:44.267Z"
 }

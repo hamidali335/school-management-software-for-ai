@@ -328,8 +328,8 @@ export class BackupService {
             try {
               keyHex = keyManager.getEncryptionKeyHex();
             } catch {
-              keyManager.unlock();
-              keyHex = keyManager.getEncryptionKeyHex();
+              // Do NOT mutate global keyManager lock state during read-only backup verification
+              keyHex = null;
             }
             if (keyHex) {
               sandboxDb.pragma("cipher = 'sqlcipher'");

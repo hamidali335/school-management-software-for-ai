@@ -116,4 +116,32 @@ export class AcademicRepository {
 
     return runTx();
   }
+
+  public listSubjects(schoolId: string): Array<{ id: string; schoolId: string; name: string; code: string; type: 'core' | 'elective'; status: string }> {
+    return this.db.prepare(`
+      SELECT id, school_id as schoolId, name, code, type, status
+      FROM subjects
+      WHERE school_id = ? AND status = 'active'
+      ORDER BY name ASC
+    `).all(schoolId) as any[];
+  }
+
+  public createSubject(
+    schoolId: string,
+    data: { id: string; name: string; code: string; type?: 'core' | 'elective' }
+  ) {
+    const cleanCode = data.code.trim().toUpperCase();
+    const cleanName = data.name.trim();
+    const subjectType = data.type === 'elective' ? 'elective' : 'core';
+    this.db.prepare(`
+      INSERT INTO subjects (id, school_id, name, code, type, status)
+      VALUES (?, ?, ?, ?, ?, 'active')
+    `).run(data.id, schoolId, cleanName, cleanCode, subjectType);
+    return { id: data.id, schoolId, name: cleanName, code: cleanCode, type: subjectType, status: 'active' };
+  }
+
+  public deleteSubject(schoolId: string, subjectId: string): { success: boolean } {
+    this.db.prepare(`UPDATE subjects SET status = 'inactive', updated_at = datetime('now') WHERE school_id = ? AND id = ?`).run(schoolId, subjectId);
+    return { success: true };
+  }
 }

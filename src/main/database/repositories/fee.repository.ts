@@ -522,8 +522,23 @@ export class FeeRepository {
       SELECT * FROM school_settings WHERE school_id = ?
     `).get(schoolId) as any;
 
+    // Compute previous unpaid dues from the student's other open invoices (matches teachassist.site challan breakdown)
+    const otherUnpaid = this.db.prepare(`
+      SELECT COUNT(*) as count, COALESCE(SUM(balance), 0) as total
+      FROM invoices
+      WHERE school_id = ? AND student_id = ? AND id != ?
+        AND balance > 0 AND (is_cancelled IS NULL OR is_cancelled = 0)
+    `).get(schoolId, invoice.student_id, invoiceId) as { count: number; total: number } | undefined;
+
+    const otherUnpaidCount = Number(otherUnpaid?.count || 0);
+    const computedPreviousDues = Number(otherUnpaid?.total || invoice.previous_dues || 0);
+    const totalPayableOnChallan = Number(invoice.balance || 0) + computedPreviousDues;
+
     return {
       ...invoice,
+      otherUnpaidCount,
+      computedPreviousDues,
+      totalPayableOnChallan,
       guardian,
       payments,
       settings,
@@ -555,15 +570,21 @@ export class FeeRepository {
     return this.db.prepare(sql).all(...params);
   }
 
-  public getSummary(schoolId: string) {
-    const row = this.db.prepare(`
+  public getSummary(schoolId: string, month?: string) {
+    let sql = `
       SELECT 
         COALESCE(SUM(amount), 0) as billed,
         COALESCE(SUM(paid_amount), 0) as collected,
         COALESCE(SUM(balance), 0) as outstanding
       FROM invoices
       WHERE school_id = ? AND (is_cancelled IS NULL OR is_cancelled = 0)
-    `).get(schoolId) as { billed: number; collected: number; outstanding: number };
+    `;
+    const params: any[] = [schoolId];
+    if (month) {
+      sql += ' AND month = ?';
+      params.push(month);
+    }
+    const row = this.db.prepare(sql).get(...params) as { billed: number; collected: number; outstanding: number };
 
     return row;
   }

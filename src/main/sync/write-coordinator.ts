@@ -221,10 +221,15 @@ export class WriteCoordinator {
               WHERE operation_id = ?
             `).run(ack.errorMessage || 'Conflict detected', operationId);
 
-            throw new Error(ack.errorMessage || `Conflict detected on cloud server for ${options.entityType}.`);
+            const conflictErr: any = new Error(ack.errorMessage || `Conflict detected on cloud server for ${options.entityType}.`);
+            conflictErr.isConflict = true;
+            throw conflictErr;
           }
         }
       } catch (err: any) {
+        if (err?.isConflict) {
+          throw err;
+        }
         const isValidationOrConflict =
           (err instanceof SyncHttpError && (err.status === 422 || err.status === 409 || err.status === 400)) ||
           /validation|rejected|duplicate|conflict/i.test(err.message || '');
@@ -253,15 +258,38 @@ export class WriteCoordinator {
           WHERE operation_id = ?
         `).run(err.message || 'Network error', err.status || 0, operationId);
 
-        if (!isProvisionalAllowed && options.isOnline !== false) {
-          return {
-            result: localResult as any,
-            syncStatus: 'pending',
-            operationId,
-            idempotencyKey,
-          };
+        // Server-first offline fallback: if central server is unreachable, persist locally
+        // so all supported administrative workflows continue uninterrupted offline.
+        if (localResult === undefined) {
+          const fallbackTx = this.db.transaction(() => {
+            try {
+              setApplyingRemoteChanges(true);
+              localResult = options.executeLocal(false);
+            } finally {
+              setApplyingRemoteChanges(false);
+            }
+          });
+          fallbackTx();
         }
+        return {
+          result: localResult as any,
+          syncStatus: 'pending',
+          operationId,
+          idempotencyKey,
+        };
       }
+    }
+
+    if (localResult === undefined) {
+      const fallbackTx = this.db.transaction(() => {
+        try {
+          setApplyingRemoteChanges(true);
+          localResult = options.executeLocal(false);
+        } finally {
+          setApplyingRemoteChanges(false);
+        }
+      });
+      fallbackTx();
     }
 
     return {

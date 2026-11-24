@@ -126,7 +126,7 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ onBack, sessionToken
       key: 'voucherNumber',
       header: 'Voucher #',
       width: '140px',
-      render: (e) => (
+      render: (_val, e) => (
         <span className="font-mono font-bold text-indigo-700 dark:text-indigo-400">
           {e.voucherNumber || e.voucher_number || `VCH-${e.id.slice(-4)}`}
         </span>
@@ -136,7 +136,7 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ onBack, sessionToken
       key: 'expenseDate',
       header: 'Date',
       width: '120px',
-      render: (e) => (
+      render: (_val, e) => (
         <span className="font-mono text-slate-500 dark:text-slate-400 text-xs">
           {e.expenseDate || e.expense_date}
         </span>
@@ -145,7 +145,7 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ onBack, sessionToken
     {
       key: 'description',
       header: 'Description & Payee',
-      render: (e) => (
+      render: (_val, e) => (
         <div>
           <span className="font-bold text-slate-900 dark:text-white block">{e.description}</span>
           <span className="text-[11px] text-slate-400 dark:text-slate-500">
@@ -157,7 +157,7 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ onBack, sessionToken
     {
       key: 'category',
       header: 'Category',
-      render: (e) => (
+      render: (_val, e) => (
         <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase border border-slate-200/60 dark:border-slate-700">
           {e.category?.replace('_', ' ')}
         </span>
@@ -166,7 +166,7 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ onBack, sessionToken
     {
       key: 'paymentMethod',
       header: 'Method',
-      render: (e) => (
+      render: (_val, e) => (
         <span className="font-mono text-slate-500 dark:text-slate-400 text-[11px] capitalize">
           {e.paymentMethod || e.payment_method || 'cash'}
         </span>
@@ -176,7 +176,7 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ onBack, sessionToken
       key: 'amount',
       header: 'Expenditure',
       align: 'right',
-      render: (e) => (
+      render: (_val, e) => (
         <span className="font-mono font-bold text-rose-600 dark:text-rose-400 text-xs">
           - {APP_METADATA.CURRENCY_SYMBOL} {e.amount.toLocaleString()}
         </span>

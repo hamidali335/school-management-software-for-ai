@@ -81,4 +81,38 @@ export class AcademicService {
 
     return sess;
   }
+
+  public listSubjects(session: ValidatedSession) {
+    RbacService.assertPermission(session, 'academics:read');
+    const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
+    return this.academicRepo.listSubjects(schoolId);
+  }
+
+  public createSubject(
+    session: ValidatedSession,
+    data: { id: string; name: string; code: string; type?: 'core' | 'elective' }
+  ) {
+    RbacService.assertPermission(session, 'academics:manage');
+    const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
+    if (!data.name?.trim() || !data.code?.trim()) {
+      throw new Error('Subject name and code are required');
+    }
+    const subject = this.academicRepo.createSubject(schoolId, data);
+    recordChange('SUBJECT', subject.id, 'INSERT', subject, this.db);
+    this.auditRepo.log({
+      schoolId,
+      userId: session.userId,
+      action: 'SUBJECT_CREATED',
+      module: 'ACADEMICS',
+      details: { subjectId: subject.id, name: subject.name, code: subject.code },
+      performedBy: session.userName || 'Administrator',
+    });
+    return subject;
+  }
+
+  public deleteSubject(session: ValidatedSession, subjectId: string) {
+    RbacService.assertPermission(session, 'academics:manage');
+    const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
+    return this.academicRepo.deleteSubject(schoolId, subjectId);
+  }
 }

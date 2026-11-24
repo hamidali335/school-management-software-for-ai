@@ -139,7 +139,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onBack, sessionToken }
         filters.startDate = startDate;
         filters.endDate = endDate;
       }
-      const data = await window.desktopAPI.generateReport(sessionToken, repId, filters);
+      const data = await window.desktopAPI.getReport(sessionToken, repId, filters);
       setReportData(data);
     } catch (err: any) {
       setError(err?.message || 'Failed to generate institutional report.');

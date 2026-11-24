@@ -3,7 +3,7 @@ import { ISyncApiClient } from './sync-api-client';
 import { WriteCoordinator, DispatchMutationOptions, DispatchMutationResult } from './write-coordinator';
 import { syncManagerInstance } from './sync-manager';
 
-export { DispatchMutationOptions, DispatchMutationResult };
+export type { DispatchMutationOptions, DispatchMutationResult };
 
 /**
  * OnlineSyncDispatcher delegates directly to WriteCoordinator, which enforces

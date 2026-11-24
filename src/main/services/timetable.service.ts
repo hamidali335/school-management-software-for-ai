@@ -18,13 +18,13 @@ export class TimetableService {
   }
 
   public listBySection(session: ValidatedSession, sessionId: string, sectionId: string, dayOfWeek?: number) {
-    RbacService.assertPermission(session, 'academics:read');
+    RbacService.assertPermission(session, 'timetable:read');
     const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
     return this.timetableRepo.listEntriesBySection(schoolId, sessionId, sectionId, dayOfWeek);
   }
 
   public validateEntry(session: ValidatedSession, data: Omit<TimetableEntryRecord, 'schoolId' | 'createdAt'>) {
-    RbacService.assertPermission(session, 'academics:read');
+    RbacService.assertPermission(session, 'timetable:read');
     const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
     try {
       this.timetableRepo.checkConflict(schoolId, data);
@@ -35,7 +35,7 @@ export class TimetableService {
   }
 
   public createEntry(session: ValidatedSession, data: Omit<TimetableEntryRecord, 'schoolId' | 'createdAt'>) {
-    RbacService.assertPermission(session, 'academics:manage');
+    RbacService.assertPermission(session, 'timetable:manage');
     const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
 
     const entry = this.timetableRepo.createEntry({
@@ -58,7 +58,7 @@ export class TimetableService {
   }
 
   public deleteEntry(session: ValidatedSession, entryId: string) {
-    RbacService.assertPermission(session, 'academics:manage');
+    RbacService.assertPermission(session, 'timetable:manage');
     const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
 
     const success = this.timetableRepo.deleteEntry(schoolId, entryId);

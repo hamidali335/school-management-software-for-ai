@@ -57,6 +57,11 @@ export const StaffView: React.FC<StaffViewProps> = ({ onBack, sessionToken }) =>
   // Payroll State
   const [payrollRuns, setPayrollRuns] = useState<any[]>([]);
   const [salaryStructures, setSalaryStructures] = useState<any[]>([]);
+  const [salaryEmployee, setSalaryEmployee] = useState<any | null>(null);
+  const [isSalaryModalOpen, setIsSalaryModalOpen] = useState(false);
+  const [salaryLoading, setSalaryLoading] = useState(false);
+  const [salaryError, setSalaryError] = useState<string | null>(null);
+  const [salaryForm, setSalaryForm] = useState({ basicSalary: '', allowances: '0', deductions: '0' });
   const [isGeneratePayrollOpen, setIsGeneratePayrollOpen] = useState(false);
   const [generatePayrollLoading, setGeneratePayrollLoading] = useState(false);
   const [payrollMonth, setPayrollMonth] = useState('November');
@@ -81,12 +86,12 @@ export const StaffView: React.FC<StaffViewProps> = ({ onBack, sessionToken }) =>
   const [staffForm, setStaffForm] = useState({
     employeeCode: '',
     fullName: '',
-    designation: 'Senior Teacher',
-    department: 'Academics',
+    designation: '',
+    department: '',
     isTeaching: true,
-    phone: '0300-1234567',
+    phone: '',
     email: '',
-    qualification: 'M.Sc. Education / B.Ed',
+    qualification: '',
     status: 'active',
     joinedDate: new Date().toISOString().split('T')[0],
   });
@@ -216,6 +221,34 @@ export const StaffView: React.FC<StaffViewProps> = ({ onBack, sessionToken }) =>
     }
   };
 
+  // Save Salary Structure
+  const handleSaveSalary = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!salaryEmployee || !window.desktopAPI || !sessionToken) return;
+    setSalaryLoading(true);
+    setSalaryError(null);
+    try {
+      const basic = Number(salaryForm.basicSalary || 0);
+      const allow = Number(salaryForm.allowances || 0);
+      const ded = Number(salaryForm.deductions || 0);
+      const res = await window.desktopAPI.saveSalaryStructure(sessionToken, {
+        employeeId: salaryEmployee.id,
+        basicSalary: basic,
+        allowancesJson: JSON.stringify(allow > 0 ? [{ label: 'Standard Allowance', amount: allow }] : []),
+        deductionsJson: JSON.stringify(ded > 0 ? [{ label: 'Standard Deduction', amount: ded }] : []),
+      });
+      if (!res.success) throw new Error(res.error || 'Failed to save salary structure');
+      setIsSalaryModalOpen(false);
+      setSalaryEmployee(null);
+      await loadData();
+      toastSuccess(`Salary structure saved for ${salaryEmployee.fullName}.`, 'Salary Updated');
+    } catch (err: any) {
+      setSalaryError(err?.message || 'Failed to save salary structure');
+    } finally {
+      setSalaryLoading(false);
+    }
+  };
+
   // Create Staff
   const handleCreateStaff = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -319,26 +352,56 @@ export const StaffView: React.FC<StaffViewProps> = ({ onBack, sessionToken }) =>
       key: 'actions',
       header: 'Actions',
       align: 'right',
-      render: (_, row) => (
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => {
-            setAccountEmployee(row);
-            setAccountForm({
-              username: row.fullName.toLowerCase().replace(/[^a-z0-9]/g, '') + row.employeeCode.toLowerCase().replace(/[^a-z0-9]/g, ''),
-              email: row.email || `${row.employeeCode.toLowerCase()}@schoolos.local`,
-              password: 'Staff@Password123',
-              role: row.isTeaching ? 'teacher' : 'accountant',
-            });
-            setIsCreateAccountOpen(true);
-          }}
-          title="Provision Staff User Account"
-        >
-          <Key className="w-3.5 h-3.5 mr-1" />
-          Create Login
-        </Button>
-      ),
+      render: (_, row) => {
+        const existingSal = salaryStructures.find((st) => st.employeeId === row.id || st.employee_id === row.id);
+        return (
+          <div className="inline-flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setSalaryEmployee(row);
+                const basic = existingSal?.basicSalary ?? existingSal?.basic_salary ?? 35000;
+                let allowSum = 0;
+                let dedSum = 0;
+                try {
+                  const arr = JSON.parse(existingSal?.allowancesJson || existingSal?.allowances_json || '[]');
+                  allowSum = Array.isArray(arr) ? arr.reduce((a: number, x: any) => a + Number(x.amount || 0), 0) : 0;
+                } catch {}
+                try {
+                  const arr = JSON.parse(existingSal?.deductionsJson || existingSal?.deductions_json || '[]');
+                  dedSum = Array.isArray(arr) ? arr.reduce((a: number, x: any) => a + Number(x.amount || 0), 0) : 0;
+                } catch {}
+                setSalaryForm({ basicSalary: String(basic), allowances: String(allowSum), deductions: String(dedSum) });
+                setSalaryError(null);
+                setIsSalaryModalOpen(true);
+              }}
+              title="Configure Monthly Salary Structure"
+            >
+              <DollarSign className="w-3.5 h-3.5" />
+              Salary
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setAccountEmployee(row);
+                setAccountForm({
+                  username: row.fullName.toLowerCase().replace(/[^a-z0-9]/g, '') + row.employeeCode.toLowerCase().replace(/[^a-z0-9]/g, ''),
+                  email: row.email || `${row.employeeCode.toLowerCase()}@schoolos.local`,
+                  password: 'Staff@Password123',
+                  role: row.isTeaching ? 'teacher' : 'accountant',
+                });
+                setIsCreateAccountOpen(true);
+              }}
+              title="Provision Staff User Account"
+            >
+              <Key className="w-3.5 h-3.5" />
+              Create Login
+            </Button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -378,12 +441,12 @@ export const StaffView: React.FC<StaffViewProps> = ({ onBack, sessionToken }) =>
                 setStaffForm({
                   employeeCode: nextCode,
                   fullName: '',
-                  designation: 'Senior Teacher',
-                  department: 'Academics',
+                  designation: '',
+                  department: '',
                   isTeaching: true,
-                  phone: '0300-1234567',
+                  phone: '',
                   email: '',
-                  qualification: 'M.Sc. Education / B.Ed',
+                  qualification: '',
                   status: 'active',
                   joinedDate: new Date().toISOString().split('T')[0],
                 });
@@ -536,7 +599,81 @@ export const StaffView: React.FC<StaffViewProps> = ({ onBack, sessionToken }) =>
 
       {/* TAB CONTENT: PAYROLL */}
       {activeTab === 'payroll' && (
-        <div className="space-y-4">
+        <div className="space-y-6">
+          {/* Staff Salary Structures Table */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
+            <div className="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/40">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Staff Salary Structures</h3>
+                <p className="text-xs text-slate-500">Configure monthly basic salary, allowances, and deductions for each employee</p>
+              </div>
+              <span className="text-xs font-semibold text-slate-500">{staff.length} staff</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 uppercase text-[10px] text-slate-500">
+                  <tr>
+                    <th className="py-3 px-4">Employee</th>
+                    <th className="py-3 px-4">Designation</th>
+                    <th className="py-3 px-4 text-right">Basic Salary</th>
+                    <th className="py-3 px-4 text-right">Allowances</th>
+                    <th className="py-3 px-4 text-right">Deductions</th>
+                    <th className="py-3 px-4 text-right">Net Salary</th>
+                    <th className="py-3 px-4 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {staff.length === 0 ? (
+                    <tr><td colSpan={7} className="py-8 text-center text-slate-400">No staff members found.</td></tr>
+                  ) : staff.map((emp) => {
+                    const st = salaryStructures.find((x) => x.employeeId === emp.id || x.employee_id === emp.id);
+                    const basic = Number(st?.basicSalary ?? st?.basic_salary ?? 0);
+                    const allow = Number(st?.allowances ?? 0);
+                    const ded = Number(st?.deductions ?? 0);
+                    const net = basic + allow - ded;
+                    return (
+                      <tr key={emp.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
+                        <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">{emp.fullName || emp.full_name}</td>
+                        <td className="py-3 px-4 text-slate-600 dark:text-slate-300">{emp.designation || '—'}</td>
+                        <td className="py-3 px-4 text-right font-mono">Rs. {basic.toLocaleString()}</td>
+                        <td className="py-3 px-4 text-right font-mono text-emerald-600">Rs. {allow.toLocaleString()}</td>
+                        <td className="py-3 px-4 text-right font-mono text-rose-600">Rs. {ded.toLocaleString()}</td>
+                        <td className="py-3 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">Rs. {net.toLocaleString()}</td>
+                        <td className="py-3 px-4 text-right">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                              setSalaryEmployee(emp);
+                              setSalaryForm({
+                                basicSalary: basic ? String(basic) : '',
+                                allowances: String(allow),
+                                deductions: String(ded),
+                              });
+                              setSalaryError(null);
+                              setIsSalaryModalOpen(true);
+                            }}
+                          >
+                            {st ? 'Edit Salary' : 'Set Salary'}
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Monthly Payroll Runs */}
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Monthly Payroll Runs ({payrollRuns.length})</h3>
+            {payrollRuns.length === 0 ? (
+              <div className="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-8 text-center text-xs text-slate-500">
+                No payroll runs generated yet. Set staff salaries above and click &ldquo;Generate Monthly Payroll&rdquo;.
+              </div>
+            ) : null}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {payrollRuns.map((r) => (
               <div key={r.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-2xs">
@@ -800,6 +937,56 @@ export const StaffView: React.FC<StaffViewProps> = ({ onBack, sessionToken }) =>
             <option value="principal">Principal (Full Operations)</option>
             <option value="school_admin">School Admin (System Settings)</option>
           </Select>
+        </form>
+      </Modal>
+
+      {/* Configure Salary Structure Modal */}
+      <Modal
+        isOpen={isSalaryModalOpen}
+        onClose={() => setIsSalaryModalOpen(false)}
+        title={salaryEmployee ? `Salary Structure — ${salaryEmployee.fullName}` : 'Configure Salary Structure'}
+        subtitle="Set monthly basic pay, allowances, and deductions for payroll runs"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsSalaryModalOpen(false)}>Cancel</Button>
+            <Button variant="primary" onClick={handleSaveSalary} isLoading={salaryLoading}>Save Salary</Button>
+          </>
+        }
+      >
+        <form onSubmit={handleSaveSalary} className="space-y-4">
+          {salaryError && (
+            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm">{salaryError}</div>
+          )}
+          <Input
+            label="Basic Monthly Salary (Rs.)"
+            type="number"
+            min="0"
+            required
+            value={salaryForm.basicSalary}
+            onChange={(e) => setSalaryForm({ ...salaryForm, basicSalary: e.target.value })}
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input
+              label="Total Allowances (Rs.)"
+              type="number"
+              min="0"
+              value={salaryForm.allowances}
+              onChange={(e) => setSalaryForm({ ...salaryForm, allowances: e.target.value })}
+            />
+            <Input
+              label="Total Deductions (Rs.)"
+              type="number"
+              min="0"
+              value={salaryForm.deductions}
+              onChange={(e) => setSalaryForm({ ...salaryForm, deductions: e.target.value })}
+            />
+          </div>
+          <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-3 flex items-center justify-between text-sm">
+            <span className="font-semibold text-slate-600 dark:text-slate-300">Estimated Net Pay:</span>
+            <span className="font-mono font-bold text-slate-900 dark:text-white">
+              Rs. {Math.max(0, Number(salaryForm.basicSalary || 0) + Number(salaryForm.allowances || 0) - Number(salaryForm.deductions || 0)).toLocaleString()}
+            </span>
+          </div>
         </form>
       </Modal>
     </div>

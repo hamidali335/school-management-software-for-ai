@@ -18,13 +18,13 @@ export class ExamService {
   }
 
   public listExams(session: ValidatedSession, sessionId?: string) {
-    RbacService.assertPermission(session, 'academics:read');
+    RbacService.assertPermission(session, 'exams:read');
     const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
     return this.examRepo.listExams(schoolId, sessionId);
   }
 
   public createExam(session: ValidatedSession, data: Omit<ExamRecord, 'schoolId' | 'createdAt' | 'updatedAt'>) {
-    RbacService.assertPermission(session, 'academics:manage');
+    RbacService.assertPermission(session, 'exams:manage');
     const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
 
     const exam = this.examRepo.createExam({
@@ -47,7 +47,7 @@ export class ExamService {
   }
 
   public publishExam(session: ValidatedSession, examId: string) {
-    RbacService.assertPermission(session, 'academics:manage');
+    RbacService.assertPermission(session, 'exams:manage');
     const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
 
     const result = this.examRepo.publishExam(schoolId, examId);
@@ -66,13 +66,13 @@ export class ExamService {
   }
 
   public listExamPapers(session: ValidatedSession, examId: string, classId?: string) {
-    RbacService.assertPermission(session, 'academics:read');
+    RbacService.assertPermission(session, 'exams:read');
     const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
     return this.examRepo.listExamPapers(schoolId, examId, classId);
   }
 
   public createExamPaper(session: ValidatedSession, data: Omit<ExamPaperRecord, 'schoolId' | 'createdAt'>) {
-    RbacService.assertPermission(session, 'academics:manage');
+    RbacService.assertPermission(session, 'exams:manage');
     const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
 
     const paper = this.examRepo.createExamPaper({
@@ -100,7 +100,7 @@ export class ExamService {
     paperId: string,
     marks: { studentId: string; obtainedMarks: number | null; isAbsent: boolean; remarks?: string }[]
   ) {
-    RbacService.assertPermission(session, 'academics:manage');
+    RbacService.assertPermission(session, 'exams:manage');
     const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
 
     const result = this.examRepo.recordStudentMarks(schoolId, examId, paperId, marks);
@@ -130,31 +130,31 @@ export class ExamService {
   }
 
   public getMarksForPaper(session: ValidatedSession, paperId: string) {
-    RbacService.assertPermission(session, 'academics:read');
+    RbacService.assertPermission(session, 'exams:read');
     const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
     return this.examRepo.getMarksForPaper(schoolId, paperId);
   }
 
   public calculateExamResults(session: ValidatedSession, examId: string, classId: string) {
-    RbacService.assertPermission(session, 'academics:read');
+    RbacService.assertPermission(session, 'exams:read');
     const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
     return this.examRepo.calculateExamResults(schoolId, examId, classId);
   }
 
   public generateReportCard(session: ValidatedSession, examId: string, studentId: string) {
-    RbacService.assertPermission(session, 'academics:read');
+    RbacService.assertPermission(session, 'exams:read');
     const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
     return this.examRepo.generateReportCard(schoolId, examId, studentId);
   }
 
   public getGradingScales(session: ValidatedSession) {
-    RbacService.assertPermission(session, 'academics:read');
+    RbacService.assertPermission(session, 'exams:read');
     const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
     return this.examRepo.getGradingScales(schoolId);
   }
 
   public saveGradingScales(session: ValidatedSession, scales: GradingScaleRecord[]) {
-    RbacService.assertPermission(session, 'academics:manage');
+    RbacService.assertPermission(session, 'exams:manage');
     const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
 
     const result = this.examRepo.saveGradingScales(schoolId, scales);

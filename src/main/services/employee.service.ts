@@ -17,7 +17,7 @@ export class EmployeeService {
     this.installService = new InstallationService(db);
   }
 
-  public listEmployees(session: ValidatedSession, query?: { search?: string; status?: string; department?: string }) {
+  public listEmployees(session: ValidatedSession, query?: { search?: string; status?: string; department?: string; isTeaching?: boolean }) {
     RbacService.assertPermission(session, 'staff:read');
     const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
     return this.employeeRepo.listEmployees(schoolId, query);

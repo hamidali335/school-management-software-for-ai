@@ -46,19 +46,28 @@ export class InstallationRepository {
     const placeholders = demoIds.map(() => '?').join(',');
     this.db.transaction(() => {
       const tables = [
-        'fee_receipts', 'fee_payments', 'invoice_items', 'fee_invoices', 'fee_discounts', 'fee_structures',
-        'exam_marks', 'exam_papers', 'exams', 'exam_terms', 'exam_grades', 'exam_grading_scales',
-        'timetable_entries', 'timetable_periods',
-        'expense_vouchers', 'account_categories',
-        'attendance', 'student_guardians', 'parents', 'students',
-        'staff', 'users',
+        'payments', 'invoices', 'fee_concessions', 'fee_structures',
+        'student_marks', 'exam_papers', 'exams', 'grading_scales',
+        'timetable_entries', 'expenses',
+        'payroll_slips', 'payroll_runs', 'staff_salaries', 'staff_attendance', 'employees',
+        'attendance', 'student_enrollments', 'student_guardians', 'students',
         'sections', 'classes', 'academic_sessions',
-        'sync_outbox', 'audit_logs', 'device_licenses',
+        'notices_cache', 'offline_mirror_cache', 'sync_conflicts', 'sync_outbox',
+        'audit_logs', 'license_cache', 'user_sessions', 'users',
         'installation_config'
       ];
-      for (const tbl of tables) {
+      try {
+        this.db.prepare('UPDATE sync_apply_context SET applying_server_tombstone = 1 WHERE id = 1').run();
+      } catch {}
+      try {
+        for (const tbl of tables) {
+          try {
+            this.db.prepare(`DELETE FROM ${tbl} WHERE school_id IN (${placeholders})`).run(...demoIds);
+          } catch {}
+        }
+      } finally {
         try {
-          this.db.prepare(`DELETE FROM ${tbl} WHERE school_id IN (${placeholders})`).run(...demoIds);
+          this.db.prepare('UPDATE sync_apply_context SET applying_server_tombstone = 0 WHERE id = 1').run();
         } catch {}
       }
     })();

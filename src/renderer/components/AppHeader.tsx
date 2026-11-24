@@ -25,6 +25,7 @@ interface AppHeaderProps {
   isSyncing: boolean;
   onTriggerSync: () => void;
   onSearch?: (term: string) => void;
+  schoolName?: string;
 }
 
 const VIEW_TITLES: Record<string, { title: string; subtitle: string }> = {
@@ -50,6 +51,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   currentUser,
   isSyncing,
   onTriggerSync,
+  schoolName,
 }) => {
   const [quickActionOpen, setQuickActionOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -80,10 +82,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
   return (
     <header className="h-16 w-full bg-white dark:bg-slate-900 border-b border-slate-200/90 dark:border-slate-800 px-5 flex items-center justify-between select-none z-20 shrink-0 transition-colors">
-      {/* Left: Breadcrumbs & Page Title */}
-      <div className="flex items-center space-x-3 min-w-0">
-
-        </div>
+      {/* Left: School Name / Role (aligned with Web Portal TopBar) */}
+      <div className="flex items-center space-x-2 min-w-0 shrink-0 max-w-[260px]">
+        <span className="truncate text-sm font-semibold text-[#16213E] dark:text-white">
+          {schoolName || currentUser?.schoolName || "School Management Software"}
+        </span>
+        <span className="text-slate-300 dark:text-slate-600 hidden lg:inline">/</span>
+        <span className="truncate text-sm text-[#5B6780] dark:text-slate-400 hidden lg:inline capitalize">
+          {currentUser?.role === "school_owner" ? "Admin" : (currentUser?.role || "Admin").replace(/_/g, " ")}
+        </span>
+      </div>
 
       {/* Center: Global Search Bar */}
       <div className="hidden md:flex items-center max-w-2xl w-full mx-4">
@@ -213,7 +221,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
           <span className="text-[13px]">
-            {isSyncing && !syncStatus?.lastSyncAt
+            {isSyncing && !syncStatus?.lastSyncedAt
               ? 'Initial sync'
               : conflictCount > 0
                 ? 'Conflict'

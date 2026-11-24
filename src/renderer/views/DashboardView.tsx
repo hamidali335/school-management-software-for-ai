@@ -9,6 +9,7 @@ import {
   Calendar,
   Bell,
   ArrowUpRight,
+  AlertTriangle,
 } from 'lucide-react';
 import { DashboardMetrics } from '../../shared/types';
 import { APP_METADATA } from '../../shared/constants';
@@ -51,7 +52,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ metrics, onNavigat
             </span>
           </div>
           <p className="mt-1 text-xs text-[#6B7280]">
-            {metrics?.classesCount ? `${metrics.classesCount} active classes` : 'Live local/cloud directory'}
+            Male: <span className="font-semibold text-[#111827] dark:text-white">{(metrics?.maleStudents ?? 0).toLocaleString()}</span> · Female: <span className="font-semibold text-[#111827] dark:text-white">{(metrics?.femaleStudents ?? 0).toLocaleString()}</span>
           </p>
         </div>
 
@@ -217,15 +218,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ metrics, onNavigat
           </div>
         </div>
 
-        <div className="lg:col-span-3 bg-white dark:bg-[#181B24] border border-[#E5E7EB] dark:border-[#2A2F3D] rounded-[14px] p-5 shadow-sm space-y-2">
-          <div className="flex items-center space-x-2">
-            <Calendar className="w-4 h-4 text-[#6366F1]" />
-            <h2 className="text-base font-semibold">Calendar</h2>
+        <div className="lg:col-span-3 bg-white dark:bg-[#181B24] border border-[#E5E7EB] dark:border-[#2A2F3D] rounded-[14px] p-5 shadow-sm flex flex-col justify-between">
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 text-[#D97706]" />
+              <h2 className="text-base font-semibold">Needs Attention</h2>
+            </div>
+            <div className="space-y-1.5 text-xs">
+              <button type="button" onClick={() => onNavigate('fees')} className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 hover:bg-amber-100 transition">
+                <span>Unpaid / Due Challans</span>
+                <span className="font-bold">{(metrics?.overdueInvoicesCount ?? 0).toLocaleString()}</span>
+              </button>
+              <button type="button" onClick={() => onNavigate('attendance')} className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 transition">
+                <span>Today&apos;s Attendance</span>
+                <span className="font-bold">{totalMarked === 0 ? 'Not Marked' : `${attendancePct}%`}</span>
+              </button>
+              <button type="button" onClick={() => onNavigate('approvals')} className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 transition">
+                <span>Pending Approvals</span>
+                <span className="font-bold">Review →</span>
+              </button>
+            </div>
           </div>
-          <p className="text-xs text-[#6B7280]">{new Date().toDateString()}</p>
-          <p className="text-xs text-[#4B5563] dark:text-slate-300 pt-2">
-            Academic Session: <span className="font-semibold">{APP_METADATA.DEFAULT_SESSION_NAME}</span>
-          </p>
         </div>
 
         <div className="lg:col-span-3 bg-white dark:bg-[#181B24] border border-[#E5E7EB] dark:border-[#2A2F3D] rounded-[14px] p-5 shadow-sm flex flex-col justify-between">

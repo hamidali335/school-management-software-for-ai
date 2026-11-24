@@ -173,6 +173,10 @@ export interface AuthSessionState {
 export interface DashboardMetrics {
   totalStudents: number;
   activeStudents: number;
+  maleStudents?: number;
+  femaleStudents?: number;
+  overdueInvoicesCount?: number;
+  pendingSyncCount?: number;
   totalFaculty: number;
   classesCount: number;
   todayAttendancePercent: number;
@@ -311,8 +315,12 @@ export interface DesktopAPI {
   getDashboardMetrics: (token?: string) => Promise<DashboardMetrics>;
   
   // Students & Guardians
-  getStudents: (token: string, query?: { search?: string; classId?: string; limit?: number }) => Promise<any[]>;
+  getStudents: (token: string, query?: { search?: string; classId?: string; sectionId?: string; limit?: number }) => Promise<any[]>;
   getStudentProfile: (token: string, studentId: string) => Promise<any>;
+  updateStudent: (token: string, studentId: string, patch: any) => Promise<{ success: boolean; data?: any; error?: string }>;
+  getSubjects: (token: string) => Promise<any[]>;
+  createSubject: (token: string, input: { id?: string; name: string; code: string; type?: 'core' | 'elective' }) => Promise<{ success: boolean; data?: any; error?: string }>;
+  deleteSubject: (token: string, subjectId: string) => Promise<{ success: boolean; error?: string }>;
   admitStudent: (token: string, data: any) => Promise<{ success: boolean; data?: any; error?: string }>;
   replaceGuardian: (token: string, input: { studentId: string; guardian: any; reason: string }) => Promise<{ success: boolean; data?: any; error?: string }>;
   archiveStudent: (token: string, input: { studentId: string; status: 'inactive' | 'graduated' | 'withdrawn'; reason?: string }) => Promise<{ success: boolean; data?: any; error?: string }>;
@@ -333,7 +341,7 @@ export interface DesktopAPI {
   getStudentAttendanceHistory: (token: string, studentId: string, sessionId?: string) => Promise<any[]>;
 
   // Fees & Concessions
-  getFeeSummary: (token: string) => Promise<any>;
+  getFeeSummary: (token: string, month?: string) => Promise<any>;
   getInvoices: (token: string, month?: string) => Promise<any[]>;
   getInvoiceDetails: (token: string, invoiceId: string) => Promise<any>;
   getDefaulters: (token: string, minBalance?: number, month?: string) => Promise<any[]>;
@@ -364,7 +372,7 @@ export interface DesktopAPI {
   saveGradingScales: (token: string, scales: any[]) => Promise<{ success: boolean; data?: any; error?: string }>;
 
   // Staff & Staff Attendance
-  getStaff: (token: string, query?: { search?: string; status?: string; department?: string }) => Promise<any[]>;
+  getStaff: (token: string, query?: { search?: string; status?: string; department?: string; isTeaching?: boolean }) => Promise<any[]>;
   createStaff: (token: string, input: any) => Promise<{ success: boolean; data?: any; error?: string }>;
   recordStaffAttendance: (token: string, entries: any[]) => Promise<{ success: boolean; recordedCount?: number; error?: string }>;
   getStaffAttendance: (token: string, date: string) => Promise<any[]>;
@@ -398,6 +406,7 @@ export interface DesktopAPI {
 
   // Reports
   getReport: (token: string, reportType: string, params?: any) => Promise<any>;
+  generateReport?: (token: string, reportType: string, params?: any) => Promise<any>;
   exportPdfReport?: (token: string, reportData: any) => Promise<{ success: boolean; filePath?: string; canceled?: boolean; error?: string }>;
   exportExcelReport?: (token: string, reportData: any) => Promise<{ success: boolean; filePath?: string; canceled?: boolean; error?: string }>;
   getSyncQueue: (token: string) => Promise<any[]>;

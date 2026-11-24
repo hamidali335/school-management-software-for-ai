@@ -288,7 +288,7 @@ export class ReportService {
     const className = classRow?.name || classId;
 
     const rows = results.results.map(r => ({
-      rank: r.rank,
+      rank: (r as any).rank,
       rollNumber: r.rollNumber,
       admissionNumber: r.admissionNumber,
       studentName: r.studentName,

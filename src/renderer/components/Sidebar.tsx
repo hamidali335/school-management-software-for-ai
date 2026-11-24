@@ -4,8 +4,8 @@ import {
   BadgeCheck,
   GraduationCap,
   UsersRound,
-  UserPlus,
   Users,
+  UserRoundCog,
   School,
   CalendarClock,
   ClipboardCheck,
@@ -17,6 +17,8 @@ import {
   Megaphone,
   ScrollText,
   FileBarChart,
+  RefreshCw,
+  CreditCard,
   Settings,
   Sun,
   Moon,
@@ -53,8 +55,8 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: 'students', label: 'Students', icon: <GraduationCap className="w-[18px] h-[18px] shrink-0" /> },
       { id: 'parents', label: 'Parents', icon: <UsersRound className="w-[18px] h-[18px] shrink-0" /> },
-      { id: 'admissions', label: 'Admissions', icon: <UserPlus className="w-[18px] h-[18px] shrink-0" /> },
       { id: 'staff', label: 'Staff & Payroll', icon: <Users className="w-[18px] h-[18px] shrink-0" /> },
+      { id: 'substitutes', label: 'Substitutes', icon: <UserRoundCog className="w-[18px] h-[18px] shrink-0" /> },
     ],
   },
   {
@@ -76,11 +78,18 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: 'Engagement & Reports',
+    label: 'Engagement',
     items: [
       { id: 'notices', label: 'Notices', icon: <Megaphone className="w-[18px] h-[18px] shrink-0" /> },
       { id: 'certificates', label: 'Certificates', icon: <ScrollText className="w-[18px] h-[18px] shrink-0" /> },
+    ],
+  },
+  {
+    label: 'Insights & System',
+    items: [
       { id: 'reports', label: 'Reports & Export', icon: <FileBarChart className="w-[18px] h-[18px] shrink-0" /> },
+      { id: 'sync-center', label: 'Sync Center', icon: <RefreshCw className="w-[18px] h-[18px] shrink-0" /> },
+      { id: 'subscription', label: 'Subscription', icon: <CreditCard className="w-[18px] h-[18px] shrink-0" /> },
     ],
   },
 ];
@@ -95,9 +104,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [expanded, setExpanded] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem('sms_sidebar_expanded');
-      return saved === null ? true : saved === 'true';
+      return saved === null ? false : saved === 'true';
     } catch {
-      return true;
+      return false;
     }
   });
   const [profileOpen, setProfileOpen] = useState(false);
@@ -123,7 +132,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside
       className={`${
-        expanded ? 'w-[248px]' : 'w-[74px]'
+        expanded ? 'w-[252px]' : 'w-[74px]'
       } h-full bg-white dark:bg-[#111827] border-r border-[#E2E8F0] dark:border-[#263147] flex flex-col justify-between py-3 select-none z-30 shrink-0 transition-all duration-200`}
       aria-label="Application Navigation"
     >
@@ -153,8 +162,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
 
-      {/* Grouped Navigation matching Web Portal */}
-      <nav className="flex-1 w-full overflow-y-auto overflow-x-hidden px-2.5 py-2.5 space-y-4">
+      {/* Grouped Navigation */}
+      <nav className="flex-1 w-full overflow-y-auto overflow-x-hidden px-2.5 py-2.5 space-y-3.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {NAV_GROUPS.map((group) => (
           <div key={group.label} className="space-y-1">
             {expanded && (
@@ -170,6 +179,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   type="button"
                   onClick={() => onNavigate(item.id)}
                   title={!expanded ? item.label : undefined}
+                  aria-current={isActive ? 'page' : undefined}
                   className={`w-full h-10 rounded-xl flex items-center ${
                     expanded ? 'px-3 space-x-3 justify-start' : 'justify-center'
                   } transition-all duration-150 ${
@@ -205,6 +215,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           type="button"
           onClick={() => onNavigate('settings')}
           title="Settings"
+          aria-current={currentView === 'settings' ? 'page' : undefined}
           className={`w-full h-10 rounded-xl flex items-center ${
             expanded ? 'px-3 space-x-3 justify-start' : 'justify-center'
           } transition ${
@@ -250,7 +261,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     setProfileOpen(false);
                     onLogout();
                   }}
-                  className="w-full px-3 py-2 rounded-lg text-sm font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center space-x-2"
+                  className="w-full px-3 py-2 rounded-lg text-sm font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center space-x-2 transition"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Sign Out</span>

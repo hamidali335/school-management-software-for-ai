@@ -1,3 +1,4 @@
+import os from 'node:os';
 import { ipcMain, app, BrowserWindow, dialog } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -328,6 +329,44 @@ export function registerIpcHandlers(): void {
     return studentService.listStudents(session, sanitizedQuery);
   });
 
+  ipcMain.handle('students:update', async (_, token: string, studentId: string, patch: any) => {
+    const session = requireSession(token);
+    licenseService.assertCanWrite('students:manage');
+    try {
+      const updated = studentService.updateStudent(session, studentId, patch);
+      return { success: true, data: updated };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to update student' };
+    }
+  });
+
+  ipcMain.handle('academics:list-subjects', async (_, token: string) => {
+    const session = requireSession(token);
+    return academicService.listSubjects(session);
+  });
+
+  ipcMain.handle('academics:create-subject', async (_, token: string, input: { id?: string; name: string; code: string; type?: 'core' | 'elective' }) => {
+    const session = requireSession(token);
+    licenseService.assertCanWrite('academics:manage');
+    try {
+      const id = input.id || `sub_${crypto.randomUUID().slice(0, 12)}`;
+      const created = academicService.createSubject(session, { id, name: input.name, code: input.code, type: input.type });
+      return { success: true, data: created };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to create subject' };
+    }
+  });
+
+  ipcMain.handle('academics:delete-subject', async (_, token: string, subjectId: string) => {
+    const session = requireSession(token);
+    licenseService.assertCanWrite('academics:manage');
+    try {
+      return academicService.deleteSubject(session, subjectId);
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete subject' };
+    }
+  });
+
   ipcMain.handle('students:get-profile', async (_, token: string, studentId: string) => {
     const session = requireSession(token);
     return studentService.getStudentProfile(session, studentId);
@@ -444,7 +483,7 @@ export function registerIpcHandlers(): void {
         schoolId: session.schoolId!,
         executeLocal: () => studentService.bulkPromoteStudents(session, promotions),
       });
-      return { success: true, promotedCount: dispatchRes.result.promotedCount, syncStatus: dispatchRes.syncStatus };
+      return { success: true, promotedCount: dispatchRes.result?.promotedCount ?? 0, syncStatus: dispatchRes.syncStatus };
     } catch (err: any) {
       return { success: false, error: err.message };
     }
@@ -575,9 +614,9 @@ export function registerIpcHandlers(): void {
   });
 
   // --- 9. Fees, Invoicing & Concessions ---
-  ipcMain.handle('fees:get-summary', async (_, token) => {
+  ipcMain.handle('fees:get-summary', async (_, token, month?: string) => {
     const session = requireSession(token);
-    return feeService.getFeeSummary(session);
+    return feeService.getFeeSummary(session, month);
   });
 
   ipcMain.handle('fees:get-invoices', async (_, token: string, month?: string) => {
@@ -690,7 +729,7 @@ export function registerIpcHandlers(): void {
         schoolId: session.schoolId!,
         executeLocal: () => feeService.reverseFeePayment(session, parse.data.paymentId, parse.data.reason),
       });
-      return { success: true, restoredBalance: dispatchRes.result.restoredBalance, reversalPaymentId: dispatchRes.result.reversalPaymentId, syncStatus: dispatchRes.syncStatus };
+      return { success: true, restoredBalance: dispatchRes.result?.restoredBalance ?? 0, reversalPaymentId: dispatchRes.result?.reversalPaymentId ?? null, syncStatus: dispatchRes.syncStatus };
     } catch (err: any) {
       return { success: false, error: err.message };
     }
@@ -764,7 +803,7 @@ export function registerIpcHandlers(): void {
         schoolId: session.schoolId!,
         executeLocal: () => feeService.revokeConcession(session, concessionId),
       });
-      return { success: dispatchRes.result.success, syncStatus: dispatchRes.syncStatus };
+      return { success: dispatchRes.result?.success ?? true, syncStatus: dispatchRes.syncStatus };
     } catch (err: any) {
       return { success: false, error: err.message };
     }
@@ -789,8 +828,8 @@ export function registerIpcHandlers(): void {
       });
       return {
         success: true,
-        generatedCount: dispatchRes.result.generatedCount,
-        skippedCount: dispatchRes.result.skippedCount,
+        generatedCount: dispatchRes.result?.generatedCount ?? 0,
+        skippedCount: dispatchRes.result?.skippedCount ?? 0,
         syncStatus: dispatchRes.syncStatus,
       };
     } catch (err: any) {
@@ -839,7 +878,7 @@ export function registerIpcHandlers(): void {
         schoolId: session.schoolId!,
         executeLocal: () => examService.publishExam(session, examId),
       });
-      return { success: dispatchRes.result.success, syncStatus: dispatchRes.syncStatus };
+      return { success: dispatchRes.result?.success ?? true, syncStatus: dispatchRes.syncStatus };
     } catch (err: any) {
       return { success: false, error: err.message };
     }
@@ -901,7 +940,7 @@ export function registerIpcHandlers(): void {
         schoolId: session.schoolId!,
         executeLocal: () => examService.recordMarks(session, parse.data.examId, parse.data.paperId, formattedMarks),
       });
-      return { success: true, recordedCount: dispatchRes.result.recordedCount, syncStatus: dispatchRes.syncStatus };
+      return { success: true, recordedCount: dispatchRes.result?.recordedCount ?? 0, syncStatus: dispatchRes.syncStatus };
     } catch (err: any) {
       return { success: false, error: err.message };
     }
@@ -990,7 +1029,7 @@ export function registerIpcHandlers(): void {
         schoolId: session.schoolId!,
         executeLocal: () => employeeService.recordStaffAttendance(session, parse.data.entries),
       });
-      return { success: true, recordedCount: dispatchRes.result.recordedCount, syncStatus: dispatchRes.syncStatus };
+      return { success: true, recordedCount: dispatchRes.result?.recordedCount ?? 0, syncStatus: dispatchRes.syncStatus };
     } catch (err: any) {
       return { success: false, error: err.message };
     }
@@ -1104,7 +1143,7 @@ export function registerIpcHandlers(): void {
         schoolId: session.schoolId!,
         executeLocal: () => timetableService.deleteEntry(session, entryId),
       });
-      return { success: dispatchRes.result.success, syncStatus: dispatchRes.syncStatus };
+      return { success: dispatchRes.result?.success ?? true, syncStatus: dispatchRes.syncStatus };
     } catch (err: any) {
       return { success: false, error: err.message };
     }
@@ -1231,7 +1270,7 @@ export function registerIpcHandlers(): void {
         schoolId: session.schoolId!,
         executeLocal: () => payrollService.markSlipPaid(session, parse.data.slipId, parse.data.paymentMethod, parse.data.paymentReference),
       });
-      return { success: dispatchRes.result.success, syncStatus: dispatchRes.syncStatus };
+      return { success: dispatchRes.result?.success ?? true, syncStatus: dispatchRes.syncStatus };
     } catch (err: any) {
       return { success: false, error: err.message };
     }
@@ -1396,8 +1435,10 @@ export function registerIpcHandlers(): void {
       },
     });
 
+    const tempHtmlPath = path.join(os.tmpdir(), `sms-report-${Date.now()}-${Math.random().toString(36).slice(2)}.html`);
     try {
-      await printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+      fs.writeFileSync(tempHtmlPath, html, 'utf8');
+      await printWin.loadFile(tempHtmlPath);
       const pdfBuffer = await printWin.webContents.printToPDF({
         pageSize: 'A4',
         landscape: columns.length > 5,
@@ -1408,8 +1449,11 @@ export function registerIpcHandlers(): void {
       });
       fs.writeFileSync(targetPath, pdfBuffer);
       return { success: true, filePath: targetPath };
+    } catch (pdfErr: any) {
+      return { success: false, error: 'Failed to export PDF document. Please try filtering by class or saving to a writable folder.' };
     } finally {
       printWin.close();
+      try { if (fs.existsSync(tempHtmlPath)) fs.unlinkSync(tempHtmlPath); } catch {}
     }
   });
 
@@ -1479,11 +1523,16 @@ export function registerIpcHandlers(): void {
     const hardwareFingerprint = DeviceFingerprint.getFingerprint();
     const deviceName = input?.deviceName || 'Workstation-Primary';
 
+    let cloudJwt = CloudTokenManager.getAccessToken(db);
+    if (!cloudJwt) cloudJwt = await CloudTokenManager.refreshAccessToken(db);
+    if (!cloudJwt) {
+      return { success: false, error: 'Cloud access token unavailable. Please sign in online first.' };
+    }
     const response = await fetch(`${backendUrl}/licensing/activate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${cloudJwt}`,
       },
       body: JSON.stringify({
         deviceId,
@@ -1599,11 +1648,16 @@ export function registerIpcHandlers(): void {
     const current = licenseService.getStatus();
     const backendUrl = syncManagerInstance.getRemoteBackendUrl();
 
+    let cloudJwt = CloudTokenManager.getAccessToken(db);
+    if (!cloudJwt) cloudJwt = await CloudTokenManager.refreshAccessToken(db);
+    if (!cloudJwt) {
+      throw new Error('Cloud access token unavailable. Please sign in online first.');
+    }
     const response = await fetch(`${backendUrl}/licensing/deactivate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${cloudJwt}`,
       },
       body: JSON.stringify({ deviceId: current.deviceId }),
     });
@@ -1896,13 +1950,28 @@ export function registerIpcHandlers(): void {
         isProvisional: issued.isProvisional,
         entryType: 'payment',
       },
-      executeLocal: () => ({
-        transactionId,
-        receiptNo: issued.receiptNo,
-        isProvisional: issued.isProvisional,
-        remainingInBlocks: issued.remainingInBlocks,
-        needsRefill: issued.needsRefill,
-      }),
+      executeLocal: () => {
+        if (input.invoiceId && Number(input.amount) > 0) {
+          try {
+            feeService.collectFeePayment(session, {
+              id: transactionId,
+              invoiceId: input.invoiceId,
+              amount: Number(input.amount),
+              paymentMethod: input.paymentMethod || 'cash',
+              paymentDate: input.paymentDate || new Date().toISOString().slice(0, 10),
+              receiptNumber: issued.receiptNo,
+              notes: input.notes || (issued.isProvisional ? 'Offline provisional receipt' : undefined),
+            } as any);
+          } catch {}
+        }
+        return {
+          transactionId,
+          receiptNo: issued.receiptNo,
+          isProvisional: issued.isProvisional,
+          remainingInBlocks: issued.remainingInBlocks,
+          needsRefill: issued.needsRefill,
+        };
+      },
     });
     return {
       success: true,
@@ -1957,8 +2026,23 @@ export function registerIpcHandlers(): void {
     });
   });
 
+  const ALLOWED_ONLINE_PREFIXES = [
+    '/admissions', '/parents', '/approvals', '/leave-requests',
+    '/homework', '/certificate', '/communications',
+    '/substitutes', '/subscription', '/students', '/employees',
+    '/payroll', '/academics', '/classes', '/sections', '/subjects',
+    '/fees', '/accounts', '/exams', '/timetable', '/school', '/settings',
+    '/attendance', '/notices', '/dashboard',
+  ];
   ipcMain.handle('online:request', async (_, token: string, opts: { method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'; path: string; body?: any }) => {
     requireSession(token);
+    const cleanPath = String(opts?.path || '');
+    if (!ALLOWED_ONLINE_PREFIXES.some((prefix) => cleanPath.startsWith(prefix))) {
+      return { ok: false, status: 403, error: 'Endpoint is not permitted through online module proxy.' };
+    }
+    if (opts.method !== 'GET') {
+      licenseService.assertCanWrite('online:manage');
+    }
     const status = syncManagerInstance.getStatus();
     return onlineProxy.request({
       ...opts,
@@ -2013,7 +2097,14 @@ export function registerIpcHandlers(): void {
   });
 
   ipcMain.handle('notices:create', async (_, token: string, input: { title: string; body: string; roles: string[] }) => {
-    requireSession(token);
+    const session = requireSession(token);
+    licenseService.assertCanWrite('notices:manage');
+    if (!['super_admin', 'school_owner', 'principal', 'admin'].includes(session.role || '')) {
+      return { ok: false, status: 403, error: 'Only school administrators can publish notices.' };
+    }
+    if (!input?.title?.trim() || !input?.body?.trim()) {
+      return { ok: false, status: 400, error: 'Notice title and message body are required.' };
+    }
     const status = syncManagerInstance.getStatus();
     if (status.network !== 'online') {
       return { ok: false, status: 0, error: 'Publishing notices is online-only. Please reconnect to the internet.' };

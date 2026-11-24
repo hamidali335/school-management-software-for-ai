@@ -585,9 +585,12 @@ describe('School Management Software — Phase 9 Architecture Hardening, Subscri
 
     assert.strictEqual(evalResult.isValid, false);
     assert.strictEqual(evalResult.state, 'expired');
-    // Approved Decision 1 (docs/ARCHITECTURE-ADDENDUM.md Section 11):
-    // Normal expiry enters read-only mode — key stays unlocked for queries, backup & export
     assert.strictEqual(keyManager.getStatus().isLocked, false);
+    assert.doesNotThrow(() => { licenseService.assertCanRead(); }); // DEK locked & memory wiped
+
+    // Active sessions invalidated
+    const activeSessions = db.prepare('SELECT COUNT(*) as c FROM auth_sessions WHERE is_revoked = 0').get().c;
+    assert.strictEqual(activeSessions, 0);
 
     // Write attempts fail closed
     assert.throws(() => {
@@ -595,18 +598,24 @@ describe('School Management Software — Phase 9 Architecture Hardening, Subscri
     }, /LICENSE_RESTRICTED/);
   });
 
-  it('Scenario 13: Subscription expires while desktop closed — startup lockout blocks access', () => {
+  it('Scenario 13: Subscription expires while desktop closed — read-only startup preserved, mutations blocked', () => {
     // Fresh service instance simulating application startup
     const startupLicService = new LicenseService(db);
     const status = startupLicService.getStatus();
 
     assert.strictEqual(status.state, 'expired');
     assert.strictEqual(status.canWrite, false);
+    assert.strictEqual(status.canRead, true);
 
-    // Attempting read assertion throws SUBSCRIPTION_EXPIRED
-    assert.throws(() => {
+    // Read operations remain accessible per Decision 1
+    assert.doesNotThrow(() => {
       startupLicService.assertCanRead();
-    }, /SUBSCRIPTION_EXPIRED/);
+    });
+
+    // Write operations fail closed
+    assert.throws(() => {
+      startupLicService.assertCanWrite('students:create');
+    }, /LICENSE_RESTRICTED/);
   });
 
   // ───────────────────────────────────────────────────────────────────────────

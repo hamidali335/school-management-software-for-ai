@@ -346,10 +346,9 @@ export class LicenseService {
     if (featureKey === 'core.backup' || featureKey === 'core.export') {
       return;
     }
+    // Decision 1: Normal expiry and grace expiry allow read-only browsing/searching/export.
+    // Only security/integrity locks (clock_tampered, revoked, device_mismatch) block reads.
     if (
-      !status.canRead ||
-      status.state === 'expired' ||
-      status.state === 'grace_expired' ||
       status.state === 'clock_tampered' ||
       status.state === 'revoked' ||
       status.state === 'device_mismatch'

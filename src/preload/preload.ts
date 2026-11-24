@@ -36,6 +36,10 @@ const api: DesktopAPI = {
   // Students & Guardians
   getStudents: (token, query) => ipcRenderer.invoke('students:get-list', token, query),
   getStudentProfile: (token, studentId) => ipcRenderer.invoke('students:get-profile', token, studentId),
+  updateStudent: (token, studentId, patch) => ipcRenderer.invoke('students:update', token, studentId, patch),
+  getSubjects: (token) => ipcRenderer.invoke('academics:list-subjects', token),
+  createSubject: (token, input) => ipcRenderer.invoke('academics:create-subject', token, input),
+  deleteSubject: (token, subjectId) => ipcRenderer.invoke('academics:delete-subject', token, subjectId),
   admitStudent: (token, data) => ipcRenderer.invoke('students:admit', token, data),
   replaceGuardian: (token, input) => ipcRenderer.invoke('students:replace-guardian', token, input),
   archiveStudent: (token, input) => ipcRenderer.invoke('students:archive', token, input),
@@ -56,7 +60,7 @@ const api: DesktopAPI = {
   getStudentAttendanceHistory: (token, studentId, sessionId) => ipcRenderer.invoke('attendance:student-history', token, studentId, sessionId),
 
   // Fees & Concessions
-  getFeeSummary: (token) => ipcRenderer.invoke('fees:get-summary', token),
+  getFeeSummary: (token, month) => ipcRenderer.invoke('fees:get-summary', token, month),
   getInvoices: (token, month) => ipcRenderer.invoke('fees:get-invoices', token, month),
   getInvoiceDetails: (token, invoiceId) => ipcRenderer.invoke('fees:get-invoice-details', token, invoiceId),
   getDefaulters: (token, minBalance, month) => ipcRenderer.invoke('fees:get-defaulters', token, minBalance, month),
@@ -121,6 +125,7 @@ const api: DesktopAPI = {
 
   // Reports
   getReport: (token, reportType, params) => ipcRenderer.invoke('reports:generate', token, reportType, params),
+  generateReport: (token, reportType, params) => ipcRenderer.invoke('reports:generate', token, reportType, params),
   exportPdfReport: (token, reportData) => ipcRenderer.invoke('reports:export-pdf', token, reportData),
   exportExcelReport: (token, reportData) => ipcRenderer.invoke('reports:export-excel', token, reportData),
   getSyncQueue: (token) => ipcRenderer.invoke('sync:get-queue', token),

@@ -67,6 +67,9 @@ export const FeesView: React.FC<FeesViewProps> = ({ onBack, sessionToken }) => {
 
   // Single Invoice Creation
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [invoiceClassFilter, setInvoiceClassFilter] = useState('');
+  const [invoiceSectionFilter, setInvoiceSectionFilter] = useState('');
+  const [invoiceStudentSearch, setInvoiceStudentSearch] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
   const [createForm, setCreateForm] = useState({
     studentId: '',
@@ -74,7 +77,7 @@ export const FeesView: React.FC<FeesViewProps> = ({ onBack, sessionToken }) => {
     challanNumber: '',
     month: 'November 2026',
     dueDate: '2026-11-25',
-    amount: 6500,
+    amount: '' as any,
     previousDues: 0,
   });
 
@@ -95,10 +98,10 @@ export const FeesView: React.FC<FeesViewProps> = ({ onBack, sessionToken }) => {
   const [structureForm, setStructureForm] = useState({
     sessionId: '',
     classId: '',
-    name: 'General Academic Fee',
-    tuitionFee: 6500,
-    examFee: 500,
-    miscFee: 200,
+    name: '',
+    tuitionFee: '' as any,
+    examFee: 0,
+    miscFee: 0,
     dueDay: 10,
   });
 
@@ -109,8 +112,8 @@ export const FeesView: React.FC<FeesViewProps> = ({ onBack, sessionToken }) => {
     studentId: '',
     sessionId: '',
     concessionType: 'percentage' as 'percentage' | 'fixed_amount',
-    value: 20,
-    reason: 'Merit scholarship',
+    value: '' as any,
+    reason: '',
   });
 
   // Payment Collection Modal State
@@ -162,7 +165,7 @@ export const FeesView: React.FC<FeesViewProps> = ({ onBack, sessionToken }) => {
         window.desktopAPI.listFeeStructures(sessionToken),
         window.desktopAPI.listConcessions(sessionToken),
         window.desktopAPI.getDefaulters(sessionToken, 1, selectedMonth || undefined),
-        window.desktopAPI.getFeeSummary(sessionToken, selectedMonth || undefined),
+        window.desktopAPI.getFeeSummary(sessionToken),
         window.desktopAPI.getStudents(sessionToken),
         window.desktopAPI.getClasses(sessionToken),
         window.desktopAPI.getAcademicSessions(sessionToken),
@@ -576,7 +579,7 @@ export const FeesView: React.FC<FeesViewProps> = ({ onBack, sessionToken }) => {
               Fee Management & Ledger
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Idempotent bulk challan generation, immutable payment ledger, contra-reversals & defaulters tracking
+              Generate challans, collect payments, reverse mistakes and track defaulters
             </p>
           </div>
         </div>
@@ -824,17 +827,61 @@ export const FeesView: React.FC<FeesViewProps> = ({ onBack, sessionToken }) => {
               </button>
             </div>
           )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Select
+              label="Filter by Class"
+              value={invoiceClassFilter}
+              onChange={(e) => { setInvoiceClassFilter(e.target.value); setInvoiceSectionFilter(''); }}
+            >
+              <option value="">All Classes</option>
+              {classes.map((cls) => (
+                <option key={cls.id} value={cls.id}>{cls.name}</option>
+              ))}
+            </Select>
+            <Select
+              label="Filter by Section"
+              value={invoiceSectionFilter}
+              onChange={(e) => setInvoiceSectionFilter(e.target.value)}
+              disabled={!invoiceClassFilter}
+            >
+              <option value="">All Sections</option>
+              {(classes.find((c) => c.id === invoiceClassFilter)?.sections || []).map((sec: any) => (
+                <option key={sec.id} value={sec.id}>{sec.name}</option>
+              ))}
+            </Select>
+          </div>
+          <Input
+            label="Search Student (Name or Admission #)"
+            placeholder="Type student name or admission number..."
+            value={invoiceStudentSearch}
+            onChange={(e) => setInvoiceStudentSearch(e.target.value)}
+          />
           <Select
-            label="Student"
+            label="Select Student *"
             value={createForm.studentId}
             onChange={(e) => setCreateForm({ ...createForm, studentId: e.target.value })}
             required
           >
-            {students.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.admission_number} — {s.full_name} ({s.class_name || 'Class'})
-              </option>
-            ))}
+            <option value="">Choose a student...</option>
+            {students
+              .filter((s) => {
+                if (invoiceClassFilter && s.class_id !== invoiceClassFilter) return false;
+                if (invoiceSectionFilter && s.section_id !== invoiceSectionFilter) return false;
+                if (invoiceStudentSearch.trim()) {
+                  const q = invoiceStudentSearch.toLowerCase();
+                  return (
+                    String(s.full_name || '').toLowerCase().includes(q) ||
+                    String(s.admission_number || '').toLowerCase().includes(q)
+                  );
+                }
+                return true;
+              })
+              .slice(0, 150)
+              .map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.admission_number} — {s.full_name} ({s.class_name || 'Class'}{s.section_name ? ` - ${s.section_name}` : ''})
+                </option>
+              ))}
           </Select>
           <Select
             label="Academic Session"
@@ -868,7 +915,8 @@ export const FeesView: React.FC<FeesViewProps> = ({ onBack, sessionToken }) => {
               label="Amount (Rs.)"
               type="number"
               value={createForm.amount}
-              onChange={(e) => setCreateForm({ ...createForm, amount: Number(e.target.value) })}
+              placeholder="Enter amount in PKR"
+              onChange={(e) => setCreateForm({ ...createForm, amount: e.target.value === '' ? ('' as any) : Number(e.target.value) })}
               required
             />
             <Input

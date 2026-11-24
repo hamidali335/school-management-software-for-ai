@@ -20,7 +20,7 @@ export class StudentService {
     this.installService = new InstallationService(db);
   }
 
-  public listStudents(session: ValidatedSession, query?: { search?: string; classId?: string; sessionId?: string; limit?: number }) {
+  public listStudents(session: ValidatedSession, query?: { search?: string; classId?: string; sectionId?: string; status?: string; gender?: string; sessionId?: string; limit?: number; offset?: number }) {
     RbacService.assertPermission(session, 'students:read');
     const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
     return this.studentRepo.listStudents(schoolId, query);
@@ -371,5 +371,37 @@ export class StudentService {
     });
 
     return { success: true };
+  }
+
+  public updateStudent(
+    session: ValidatedSession,
+    studentId: string,
+    patch: {
+      fullName?: string;
+      fatherName?: string;
+      gender?: string;
+      dateOfBirth?: string | null;
+      cnicBform?: string | null;
+      phone?: string | null;
+      address?: string | null;
+      previousSchool?: string | null;
+      adminNotes?: string | null;
+      status?: string;
+    }
+  ) {
+    RbacService.assertPermission(session, 'students:manage');
+    const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
+    const updated = this.studentRepo.updateStudent(schoolId, studentId, patch);
+    if (!updated) throw new Error('Student not found');
+    recordChange('STUDENT', studentId, 'UPDATE', { id: studentId, ...patch }, this.db);
+    this.auditRepo.log({
+      schoolId,
+      userId: session.userId,
+      action: 'STUDENT_UPDATED',
+      module: 'STUDENTS',
+      details: { studentId, fields: Object.keys(patch) },
+      performedBy: session.userName || 'Administrator',
+    });
+    return updated;
   }
 }

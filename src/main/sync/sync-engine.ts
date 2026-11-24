@@ -160,7 +160,7 @@ export class SyncEngine {
   public startAutoSync(intervalMs: number = 30000) {
     this.stopAutoSync();
     this.autoSyncTimer = setInterval(() => {
-      if (this.networkState === 'online' && !this.isSyncing) {
+      if (!this.isSyncing) {
         this.triggerSync().catch(() => {});
       }
     }, intervalMs);
@@ -185,7 +185,18 @@ export class SyncEngine {
     error?: string;
   }> {
     if (this.networkState === 'offline') {
-      return { success: false, uploadedCount: 0, downloadedCount: 0, conflictCount: 0, error: 'Cannot synchronize: System is currently offline.' };
+      // Self-healing: the server may be reachable again. Re-check before refusing, so recovery
+      // does not have to wait for an external signal.
+      let reachable = false;
+      try {
+        reachable = (await this.apiClient.verifyConnectivity()).online;
+      } catch {
+        reachable = false;
+      }
+      if (!reachable) {
+        return { success: false, uploadedCount: 0, downloadedCount: 0, conflictCount: 0, error: 'Cannot synchronize: System is currently offline.' };
+      }
+      this.setNetworkState('online');
     }
 
     if (this.apiClient instanceof UnconfiguredSyncApiClient) {
@@ -223,6 +234,8 @@ export class SyncEngine {
     try {
       // 1. Verify Connectivity
       const conn = await this.apiClient.verifyConnectivity();
+      // Keep the header status truthful: it must follow real reachability of the cloud server.
+      this.setNetworkState(conn.online ? 'online' : 'offline');
       if (!conn.online) {
         throw new Error('Remote central backend is unreachable.');
       }
@@ -253,10 +266,16 @@ export class SyncEngine {
         localInvoiceCount = (this.db.prepare('SELECT COUNT(*) as c FROM invoices WHERE school_id = ?').get(schoolId) as any)?.c || 0;
         localEmployeeCount = (this.db.prepare('SELECT COUNT(*) as c FROM employees WHERE school_id = ?').get(schoolId) as any)?.c || 0;
       } catch {}
-      if (!cursorRow || localStudentCount === 0 || localClassCount === 0 || localInvoiceCount === 0 || localEmployeeCount === 0) {
+      // Hydrate only on the very first sync of this workstation. (Previously any empty local table, e.g. a
+      // school with no invoices yet, re-triggered a full re-download on EVERY sync cycle.)
+      void localStudentCount; void localClassCount; void localInvoiceCount; void localEmployeeCount;
+      if (!cursorRow) {
         try {
           const restCount = await this.hydrateFromCloudRest(schoolId, deviceConfig.deviceId);
           downloadedCount += restCount;
+          this.db
+            .prepare('INSERT OR IGNORE INTO sync_school_cursor (school_id, last_seq, updated_at) VALUES (?, 0, CURRENT_TIMESTAMP)')
+            .run(schoolId);
         } catch (restErr) {
           console.warn('[SyncEngine] REST bootstrap hydration skipped:', restErr);
         }

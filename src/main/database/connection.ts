@@ -227,6 +227,16 @@ export function getDashboardMetrics(): DashboardMetrics {
 
   const totalStudents = (db.prepare('SELECT COUNT(*) as c FROM students WHERE school_id = ?').get(schoolId) as { c: number }).c;
   const activeStudents = (db.prepare("SELECT COUNT(*) as c FROM students WHERE school_id = ? AND status = 'active'").get(schoolId) as { c: number }).c;
+  const maleStudents = (db.prepare("SELECT COUNT(*) as c FROM students WHERE school_id = ? AND status = 'active' AND lower(COALESCE(gender, '')) = 'male'").get(schoolId) as { c: number }).c;
+  const femaleStudents = (db.prepare("SELECT COUNT(*) as c FROM students WHERE school_id = ? AND status = 'active' AND lower(COALESCE(gender, '')) = 'female'").get(schoolId) as { c: number }).c;
+  let overdueInvoicesCount = 0;
+  try {
+    overdueInvoicesCount = (db.prepare("SELECT COUNT(*) as c FROM invoices WHERE school_id = ? AND status IN ('unpaid', 'partial', 'overdue') AND balance > 0").get(schoolId) as { c: number }).c;
+  } catch {}
+  let pendingSyncCount = 0;
+  try {
+    pendingSyncCount = (db.prepare("SELECT COUNT(*) as c FROM sync_outbox WHERE school_id = ? AND state IN ('pending', 'retrying', 'conflict', 'needs_attention')").get(schoolId) as { c: number }).c;
+  } catch {}
   const totalFaculty = (db.prepare("SELECT COUNT(*) as c FROM employees WHERE school_id = ? AND status = 'active'").get(schoolId) as { c: number }).c;
   const classesCount = (db.prepare('SELECT COUNT(*) as c FROM classes WHERE school_id = ?').get(schoolId) as { c: number }).c;
 
@@ -270,6 +280,10 @@ export function getDashboardMetrics(): DashboardMetrics {
   return {
     totalStudents,
     activeStudents,
+    maleStudents,
+    femaleStudents,
+    overdueInvoicesCount,
+    pendingSyncCount,
     totalFaculty,
     classesCount,
     todayAttendancePercent: attendancePct,

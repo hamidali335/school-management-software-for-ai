@@ -173,7 +173,7 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, sessionT
   const presentCount = students.filter((s) => records[s.id]?.status === 'present').length;
   const absentCount = students.filter((s) => records[s.id]?.status === 'absent').length;
   const lateCount = students.filter((s) => records[s.id]?.status === 'late').length;
-  const attendanceRate = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 100;
+  const attendanceRate = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : null;
 
   return (
     <div className="space-y-5 pb-8 font-sans">
@@ -194,7 +194,7 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, sessionT
               <Badge variant="success" size="sm">Active Session</Badge>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Record daily student attendance with instant local database uniqueness constraint
+              Record daily student attendance by class and date
             </p>
           </div>
         </div>
@@ -308,7 +308,7 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, sessionT
         <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl p-3.5 flex items-center justify-between shadow-2xs">
           <div>
             <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">Attendance Rate</p>
-            <p className="text-base font-bold text-slate-900 dark:text-white">{attendanceRate}%</p>
+            <p className="text-base font-bold text-slate-900 dark:text-white">{attendanceRate === null ? '—' : `${attendanceRate}%`}</p>
           </div>
           <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
             {presentCount} / {totalCount}

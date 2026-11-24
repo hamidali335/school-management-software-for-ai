@@ -98,6 +98,14 @@ if (!gotTheLock) {
         },
       });
 
+      // Enforce webContents security boundaries (deny external popups and arbitrary navigations)
+      mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+      mainWindow.webContents.on('will-navigate', (event, targetUrl) => {
+        if (!targetUrl.startsWith('file://') && !targetUrl.startsWith('http://localhost:')) {
+          event.preventDefault();
+        }
+      });
+
       // Defensive fallback timer: ensure window displays even if ready-to-show is delayed
       let showFallbackTimer: NodeJS.Timeout | null = setTimeout(() => {
         if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {

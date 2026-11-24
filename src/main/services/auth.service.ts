@@ -235,26 +235,26 @@ export class AuthService {
           if (licRes && licRes.ok) {
             const licJson = await licRes.json();
             const licData = licJson.data || licJson;
-            const lic = licData?.license || licData;
-            if (lic && (lic.licenseId || lic.signedPayload)) {
+            if (licData && licData.license) {
+              const lic = licData.license;
               this.licenseService.storeLicense({
-                licenseId: lic.licenseId || `cloud_session_${schoolId}`,
-                schoolId: lic.schoolId || schoolId,
+                licenseId: lic.licenseId,
+                schoolId: lic.schoolId,
                 schoolName: lic.schoolName || schoolName,
                 schoolCode: lic.schoolCode || schoolCode,
                 deviceId: lic.deviceId || deviceId,
-                hardwareFingerprint: lic.hardwareFingerprint || hardwareFingerprint,
+                hardwareFingerprint,
                 planCode: lic.planCode || 'standard',
                 planName: lic.planName || 'Standard Plan',
                 status: 'active',
                 issuedAt: lic.issuedAt || new Date().toISOString(),
                 expiresAt: lic.expiresAt || new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
-                gracePeriodDays: lic.gracePeriodDays ?? 7,
-                entitlements: Array.isArray(lic.entitlements) ? lic.entitlements : permissions,
+                gracePeriodDays: lic.gracePeriodDays || 7,
+                entitlements: lic.entitlements || permissions,
                 limits: lic.limits || {},
                 signedPayload: lic.signedPayload || JSON.stringify(lic),
-                signature: lic.signature || 'cloud_auth_verified',
-                publicKey: lic.publicKey || 'cloud_auth_verified',
+                signature: lic.signature || 'sig_auto_verified',
+                publicKey: lic.publicKey || 'pub_key',
               });
             }
           }
@@ -266,16 +266,11 @@ export class AuthService {
         // even if /licensing/activate is not provisioned yet on the server.
         try {
           const currentLic = this.licenseService.getStatus();
-          if (
-            currentLic.state === 'unactivated' ||
-            currentLic.state === 'revoked' ||
-            currentLic.state === 'device_mismatch' ||
-            currentLic.state === 'expired'
-          ) {
+          if (currentLic.state === 'unactivated') {
             const subExpiry =
               cloudResult?.school?.subscription?.expiresAt ||
               cloudResult?.school?.subscription?.currentPeriodEnd ||
-              new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString();
+              new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
             const mergedEntitlements = Array.from(
               new Set<string>([
                 '*',
@@ -285,9 +280,8 @@ export class AuthService {
                 'core.export',
               ]),
             );
-            const fallbackLicId = `cloud_session_${schoolId}`;
-            const fallbackPayload = {
-              licenseId: fallbackLicId,
+            this.licenseService.storeLicense({
+              licenseId: `cloud_session_${schoolId}`,
               schoolId,
               schoolName,
               schoolCode,
@@ -301,11 +295,7 @@ export class AuthService {
               gracePeriodDays: 7,
               entitlements: mergedEntitlements,
               limits: {},
-              licenseVersion: 1,
-            };
-            this.licenseService.storeLicense({
-              ...fallbackPayload,
-              signedPayload: JSON.stringify(fallbackPayload),
+              signedPayload: JSON.stringify({ schoolId, deviceId, issuedAt: new Date().toISOString() }),
               signature: 'cloud_auth_verified',
               publicKey: 'cloud_auth_verified',
             });
@@ -583,6 +573,23 @@ export class AuthService {
         if (cloudRes && !cloudRes.ok && cloudRes.status !== 404) {
           const errBody = await cloudRes.json().catch(() => ({}));
           throw new Error(errBody.message || 'Cloud backend rejected password change');
+        }
+        if (cloudRes && cloudRes.ok) {
+          const okBody = await cloudRes.json().catch(() => null) as any;
+          const payload = okBody?.data ?? okBody;
+          const newAccess = payload?.accessToken || payload?.tokens?.accessToken;
+          const newRefresh = payload?.refreshToken || payload?.tokens?.refreshToken;
+          if (newAccess) {
+            try {
+              const encAccess = CredentialVault.encryptSecret(newAccess);
+              if (newRefresh) {
+                const encRefresh = CredentialVault.encryptSecret(newRefresh);
+                this.db.prepare("UPDATE sync_device_config SET auth_token_encrypted = ?, refresh_token_encrypted = ?, updated_at = datetime('now') WHERE id = 1").run(encAccess, encRefresh);
+              } else {
+                this.db.prepare("UPDATE sync_device_config SET auth_token_encrypted = ?, updated_at = datetime('now') WHERE id = 1").run(encAccess);
+              }
+            } catch {}
+          }
         }
       }
     } catch (err: any) {

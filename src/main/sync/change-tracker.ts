@@ -261,7 +261,7 @@ export function getPendingOutboxEntries(limit: number = 50, dbInstance?: Databas
           operation,
           payload_json as payloadJson,
           status,
-          retry_count as retryCount,
+          attempt_count as retryCount,
           error_message as errorMessage,
           event_id as eventId,
           idempotency_key as idempotencyKey,
@@ -314,7 +314,7 @@ export function markEntryFailed(id: number, error: string, retryAfter?: string, 
   } catch {
     const stmt = db.prepare(`
       UPDATE sync_outbox
-      SET status = 'failed', retry_count = retry_count + 1, error_message = ?, retry_after = ?
+      SET status = 'failed', state = 'retrying', attempt_count = attempt_count + 1, error_message = ?, retry_after = ?
       WHERE id = ?
     `);
     stmt.run(error, retryAfter || null, id);
@@ -325,10 +325,10 @@ export function markEntryConflict(id: number, error: string, dbInstance?: Databa
   const db = dbInstance || getDatabase();
   const stmt = db.prepare(`
     UPDATE sync_outbox
-    SET status = 'failed', error_message = ?
+    SET status = 'conflict', state = 'conflict', error_message = ?, last_error = ?
     WHERE id = ?
   `);
-  stmt.run(error, id);
+  stmt.run(error, error, id);
 }
 
 export function resetFailedEntriesForRetry(dbInstance?: Database.Database): number {

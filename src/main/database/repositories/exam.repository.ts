@@ -359,6 +359,7 @@ export class ExamRepository {
         gpa,
         status,
         absentCount: totalAbsent,
+        rank: 0,
         subjects,
       };
     });
@@ -366,7 +367,7 @@ export class ExamRepository {
     // Compute ranks sorted by totalObtainedMarks descending
     calculated.sort((a, b) => b.totalObtainedMarks - a.totalObtainedMarks);
     calculated.forEach((c, index) => {
-      (c as any).rank = index + 1;
+      c.rank = index + 1;
     });
 
     const totalPassed = calculated.filter(c => c.status === 'PASS').length;

@@ -10,6 +10,7 @@ import {
   Users,
   CheckCircle2,
   X,
+  Trash2,
 } from 'lucide-react';
 import {
   Button,
@@ -35,7 +36,11 @@ export const AcademicsView: React.FC<AcademicsViewProps> = ({ onBack, sessionTok
   const { success: toastSuccess, error: toastError } = useToast();
   const [classes, setClasses] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'classes' | 'sessions'>('classes');
+  const [activeTab, setActiveTab] = useState<'classes' | 'subjects' | 'sessions'>('classes');
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [isAddSubjectOpen, setIsAddSubjectOpen] = useState(false);
+  const [subjectLoading, setSubjectLoading] = useState(false);
+  const [subjectForm, setSubjectForm] = useState({ name: '', code: '', type: 'core' as 'core' | 'elective' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -248,6 +253,7 @@ export const AcademicsView: React.FC<AcademicsViewProps> = ({ onBack, sessionTok
         <Tabs
           tabs={[
             { id: 'classes', label: 'Class Grades & Sections', icon: <Layers className="w-3.5 h-3.5" />, badge: classes.length },
+            { id: 'subjects', label: 'Subjects Master', icon: <BookOpen className="w-3.5 h-3.5" />, badge: subjects.length },
             { id: 'sessions', label: 'Academic Sessions Calendar', icon: <Calendar className="w-3.5 h-3.5" />, badge: sessions.length },
           ]}
           activeTab={activeTab}
@@ -296,6 +302,63 @@ export const AcademicsView: React.FC<AcademicsViewProps> = ({ onBack, sessionTok
       )}
 
       {/* Tab 2: Sessions List */}
+      {activeTab === 'subjects' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Standardized institutional subjects used across Exams, Report Cards, and Timetable.
+            </p>
+            <Button variant="primary" size="sm" onClick={() => { setSubjectForm({ name: '', code: '', type: 'core' }); setIsAddSubjectOpen(true); }}>
+              <Plus className="w-4 h-4" />
+              Add Subject
+            </Button>
+          </div>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
+            {subjects.length === 0 ? (
+              <div className="p-10 text-center text-sm text-slate-500">
+                No subjects configured yet. Click <strong>Add Subject</strong> to create your subject master list (e.g., Mathematics, English, Computer).
+              </div>
+            ) : (
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700 text-xs uppercase text-slate-500">
+                  <tr>
+                    <th className="py-3 px-4">Subject Name</th>
+                    <th className="py-3 px-4">Code</th>
+                    <th className="py-3 px-4">Type</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {subjects.map((sub) => (
+                    <tr key={sub.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">{sub.name}</td>
+                      <td className="py-3 px-4 font-mono text-slate-600 dark:text-slate-300">{sub.code}</td>
+                      <td className="py-3 px-4">
+                        <Badge variant={sub.type === 'core' ? 'primary' : 'neutral'}>{sub.type === 'core' ? 'Core' : 'Elective'}</Badge>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={async () => {
+                            if (!sessionToken || !window.desktopAPI?.deleteSubject) return;
+                            await window.desktopAPI.deleteSubject(sessionToken, sub.id);
+                            await loadData();
+                          }}
+                          title="Remove Subject"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
       {activeTab === 'sessions' && (
         <div className="space-y-3">
           {sessions.map((sess) => (
@@ -449,6 +512,66 @@ export const AcademicsView: React.FC<AcademicsViewProps> = ({ onBack, sessionTok
             />
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={isAddSubjectOpen}
+        onClose={() => setIsAddSubjectOpen(false)}
+        title="Add New Subject"
+        subtitle="Define a standardized subject for exams and timetables"
+        footer={
+          <>
+            <Button variant="outline" size="sm" onClick={() => setIsAddSubjectOpen(false)}>Cancel</Button>
+            <Button
+              variant="primary"
+              size="sm"
+              isLoading={subjectLoading}
+              onClick={async () => {
+                if (!sessionToken || !window.desktopAPI?.createSubject || !subjectForm.name.trim() || !subjectForm.code.trim()) return;
+                setSubjectLoading(true);
+                try {
+                  const res = await window.desktopAPI.createSubject(sessionToken, subjectForm);
+                  if (res.success) {
+                    setIsAddSubjectOpen(false);
+                    await loadData();
+                  }
+                } finally {
+                  setSubjectLoading(false);
+                }
+              }}
+            >
+              Save Subject
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Input
+            label="Subject Name"
+            required
+            placeholder="e.g. Mathematics"
+            value={subjectForm.name}
+            onChange={(e) => setSubjectForm({ ...subjectForm, name: e.target.value })}
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input
+              label="Subject Code"
+              required
+              placeholder="e.g. MATH"
+              value={subjectForm.code}
+              onChange={(e) => setSubjectForm({ ...subjectForm, code: e.target.value.toUpperCase() })}
+            />
+            <Select
+              label="Subject Type"
+              required
+              value={subjectForm.type}
+              onChange={(e) => setSubjectForm({ ...subjectForm, type: e.target.value as 'core' | 'elective' })}
+            >
+              <option value="core">Core</option>
+              <option value="elective">Elective</option>
+            </Select>
+          </div>
+        </div>
       </Modal>
     </div>
   );

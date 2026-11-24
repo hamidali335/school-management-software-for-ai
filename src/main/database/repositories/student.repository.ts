@@ -273,11 +273,14 @@ export class StudentRepository {
     return runTx();
   }
 
-  public listStudents(schoolId: string, query?: { search?: string; classId?: string; sessionId?: string; limit?: number }) {
+  public listStudents(
+    schoolId: string,
+    query?: { search?: string; classId?: string; sectionId?: string; status?: string; gender?: string; sessionId?: string; limit?: number; offset?: number }
+  ) {
     let sql = `
       SELECT 
         s.id, s.school_id as schoolId, s.admission_number, s.full_name, s.father_name, s.gender,
-        s.phone, s.cnic_bform, s.status,
+        s.date_of_birth, s.address, s.phone, s.cnic_bform, s.previous_school, s.admin_notes, s.status,
         c.name as class_name, sec.name as section_name, e.roll_number, e.session_id,
         e.class_id, e.section_id
       FROM students s
@@ -289,9 +292,9 @@ export class StudentRepository {
     const params: any[] = [schoolId];
 
     if (query?.search) {
-      sql += ` AND (s.full_name LIKE ? OR s.admission_number LIKE ? OR s.father_name LIKE ?)`;
+      sql += ` AND (s.full_name LIKE ? OR s.admission_number LIKE ? OR s.father_name LIKE ? OR s.phone LIKE ?)`;
       const searchPattern = `%${query.search}%`;
-      params.push(searchPattern, searchPattern, searchPattern);
+      params.push(searchPattern, searchPattern, searchPattern, searchPattern);
     }
 
     if (query?.classId) {
@@ -299,15 +302,66 @@ export class StudentRepository {
       params.push(query.classId);
     }
 
+    if (query?.sectionId) {
+      sql += ` AND e.section_id = ? AND e.status IN ('enrolled', 'active')`;
+      params.push(query.sectionId);
+    }
+
+    if (query?.status && query.status !== 'all') {
+      sql += ` AND s.status = ?`;
+      params.push(query.status);
+    }
+
+    if (query?.gender && query.gender !== 'all') {
+      sql += ` AND lower(s.gender) = lower(?)`;
+      params.push(query.gender);
+    }
+
     if (query?.sessionId) {
       sql += ` AND e.session_id = ? AND e.status IN ('enrolled', 'active')`;
       params.push(query.sessionId);
     }
 
-    sql += ` ORDER BY s.admission_number ASC LIMIT ?`;
-    params.push(query?.limit || 50);
+    sql += ` ORDER BY s.admission_number ASC LIMIT ? OFFSET ?`;
+    params.push(query?.limit || 10000, query?.offset || 0);
 
     return this.db.prepare(sql).all(...params);
+  }
+
+  public updateStudent(
+    schoolId: string,
+    studentId: string,
+    patch: {
+      fullName?: string;
+      fatherName?: string;
+      gender?: string;
+      dateOfBirth?: string | null;
+      cnicBform?: string | null;
+      phone?: string | null;
+      address?: string | null;
+      previousSchool?: string | null;
+      adminNotes?: string | null;
+      status?: string;
+    }
+  ): StudentRecord | null {
+    const sets: string[] = [];
+    const params: any[] = [];
+    if (patch.fullName !== undefined) { sets.push('full_name = ?'); params.push(patch.fullName.trim()); }
+    if (patch.fatherName !== undefined) { sets.push('father_name = ?'); params.push(patch.fatherName.trim()); }
+    if (patch.gender !== undefined) { sets.push('gender = ?'); params.push(patch.gender); }
+    if (patch.dateOfBirth !== undefined) { sets.push('date_of_birth = ?'); params.push(patch.dateOfBirth || null); }
+    if (patch.cnicBform !== undefined) { sets.push('cnic_bform = ?'); params.push(patch.cnicBform || null); }
+    if (patch.phone !== undefined) { sets.push('phone = ?'); params.push(patch.phone || null); }
+    if (patch.address !== undefined) { sets.push('address = ?'); params.push(patch.address || null); }
+    if (patch.previousSchool !== undefined) { sets.push('previous_school = ?'); params.push(patch.previousSchool || null); }
+    if (patch.adminNotes !== undefined) { sets.push('admin_notes = ?'); params.push(patch.adminNotes || null); }
+    if (patch.status !== undefined) { sets.push('status = ?'); params.push(patch.status); }
+    if (sets.length === 0) return this.findById(schoolId, studentId);
+
+    sets.push("updated_at = datetime('now')");
+    params.push(schoolId, studentId);
+    this.db.prepare(`UPDATE students SET ${sets.join(', ')} WHERE school_id = ? AND id = ?`).run(...params);
+    return this.findById(schoolId, studentId);
   }
 
   public countStudents(schoolId: string): number {

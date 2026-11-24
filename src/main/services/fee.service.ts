@@ -281,10 +281,10 @@ export class FeeService {
     return this.feeRepo.getInvoiceDetails(schoolId, invoiceId);
   }
 
-  public getFeeSummary(session: ValidatedSession) {
+  public getFeeSummary(session: ValidatedSession, month?: string) {
     RbacService.assertPermission(session, 'fees:read');
     const schoolId = this.installService.assertSchoolIsolation(session.schoolId);
-    return this.feeRepo.getSummary(schoolId);
+    return this.feeRepo.getSummary(schoolId, month);
   }
 
   public getDefaulters(session: ValidatedSession, minBalance?: number, month?: string) {

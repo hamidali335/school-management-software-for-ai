@@ -13,6 +13,7 @@ import { migration011RebuildSyncOutboxAndSeq } from './011_rebuild_sync_outbox_a
 import { migration012ReceiptBlocksAndPaymentLedger } from './012_receipt_blocks_and_payment_ledger';
 import { migration013OfflineMirrorAndNotices } from './013_offline_mirror_and_notices';
 import { migration014PermissionSnapshotExpiry } from './014_permission_snapshot_expiry';
+import { migration015SubjectsAndSchoolRules } from './015_subjects_and_school_rules';
 
 export const ALL_MIGRATIONS: Migration[] = [
   migration001CoreSchema,
@@ -29,6 +30,7 @@ export const ALL_MIGRATIONS: Migration[] = [
   migration012ReceiptBlocksAndPaymentLedger,
   migration013OfflineMirrorAndNotices,
   migration014PermissionSnapshotExpiry,
+  migration015SubjectsAndSchoolRules,
 ];
 
 export * from './migration-runner';

@@ -42,24 +42,26 @@ export const migration012ReceiptBlocksAndPaymentLedger: Migration = {
       (t) => t.name,
     );
 
-    if (tables.includes('fee_payments')) {
-      addColumnIfMissing(db, 'fee_payments', 'transaction_id', 'TEXT');
-      addColumnIfMissing(db, 'fee_payments', 'entry_type', "TEXT NOT NULL DEFAULT 'payment'");
-      addColumnIfMissing(db, 'fee_payments', 'original_payment_id', 'TEXT');
-      addColumnIfMissing(db, 'fee_payments', 'provisional_receipt_no', 'TEXT');
-      addColumnIfMissing(db, 'fee_payments', 'official_receipt_no', 'TEXT');
-      addColumnIfMissing(db, 'fee_payments', 'is_provisional', 'INTEGER NOT NULL DEFAULT 0');
-      addColumnIfMissing(db, 'fee_payments', 'sync_status', "TEXT NOT NULL DEFAULT 'pending'");
+    const paymentTable = tables.includes('payments') ? 'payments' : tables.includes('fee_payments') ? 'fee_payments' : null;
+    if (paymentTable) {
+      addColumnIfMissing(db, paymentTable, 'transaction_id', 'TEXT');
+      addColumnIfMissing(db, paymentTable, 'entry_type', "TEXT NOT NULL DEFAULT 'payment'");
+      addColumnIfMissing(db, paymentTable, 'original_payment_id', 'TEXT');
+      addColumnIfMissing(db, paymentTable, 'provisional_receipt_no', 'TEXT');
+      addColumnIfMissing(db, paymentTable, 'official_receipt_no', 'TEXT');
+      addColumnIfMissing(db, paymentTable, 'is_provisional', 'INTEGER NOT NULL DEFAULT 0');
+      addColumnIfMissing(db, paymentTable, 'sync_status', "TEXT NOT NULL DEFAULT 'pending'");
       db.exec(`
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_fee_payments_transaction_id
-          ON fee_payments(school_id, transaction_id)
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_${paymentTable}_transaction_id
+          ON ${paymentTable}(school_id, transaction_id)
           WHERE transaction_id IS NOT NULL;
       `);
     }
 
-    if (tables.includes('fee_invoices')) {
-      addColumnIfMissing(db, 'fee_invoices', 'overpaid', 'INTEGER NOT NULL DEFAULT 0');
-      addColumnIfMissing(db, 'fee_invoices', 'overpaid_amount', 'REAL NOT NULL DEFAULT 0');
+    const invoiceTable = tables.includes('invoices') ? 'invoices' : tables.includes('fee_invoices') ? 'fee_invoices' : null;
+    if (invoiceTable) {
+      addColumnIfMissing(db, invoiceTable, 'overpaid', 'INTEGER NOT NULL DEFAULT 0');
+      addColumnIfMissing(db, invoiceTable, 'overpaid_amount', 'REAL NOT NULL DEFAULT 0');
     }
   },
   down(db: Database.Database) {

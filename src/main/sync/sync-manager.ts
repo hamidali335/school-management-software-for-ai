@@ -15,8 +15,46 @@ export class SyncManager {
       const db = getDatabase();
       this.engine = new SyncEngine(db);
       this.engine.setNetworkState(this.networkState);
+      this.startConnectivityMonitor();
     }
     return this.engine;
+  }
+
+  /**
+   * Keeps the online/offline indicator truthful: checks real reachability of the cloud server
+   * at startup and every 15 seconds. (Previously the state was permanently 'online'.)
+   */
+  private connectivityTimer: ReturnType<typeof setInterval> | null = null;
+  private wasOffline: boolean = false;
+  private autoReconnectSyncing: boolean = false;
+
+  private startConnectivityMonitor(): void {
+    if (this.connectivityTimer) return;
+    const check = async () => {
+      try {
+        const res = await this.getApiClient().verifyConnectivity();
+        if (res.online) {
+          const recoveredFromOffline = this.wasOffline || this.networkState === 'offline';
+          this.wasOffline = false;
+          this.setNetworkState('online');
+          if (recoveredFromOffline && !this.autoReconnectSyncing) {
+            this.autoReconnectSyncing = true;
+            this.triggerSync().catch(() => {}).finally(() => {
+              this.autoReconnectSyncing = false;
+            });
+          }
+        } else {
+          this.wasOffline = true;
+          this.setNetworkState('offline');
+        }
+      } catch {
+        this.wasOffline = true;
+        this.setNetworkState('offline');
+      }
+    };
+    void check();
+    this.connectivityTimer = setInterval(check, 15000);
+    (this.connectivityTimer as any).unref?.();
   }
 
   public setApiClient(client: ISyncApiClient): void {

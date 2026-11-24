@@ -20,6 +20,7 @@ import { SettingsView } from './views/SettingsView';
 import { SyncCenterView } from './views/SyncCenterView';
 import { NoticesView } from './views/NoticesView';
 import { OnlineModuleView, ONLINE_MODULES } from './views/OnlineModuleView';
+import { SubstitutesView } from './views/SubstitutesView';
 import { LoginView } from './views/LoginView';
 import { SubscriptionExpiredView } from './views/SubscriptionExpiredView';
 import {
@@ -119,6 +120,15 @@ const AppContent: React.FC = () => {
       refreshData();
     }
   }, [currentUser, sessionToken, refreshData]);
+
+  // Keep the header/footer sync indicators live (connection, pending changes, conflicts).
+  useEffect(() => {
+    if (!sessionToken || !window.desktopAPI) return;
+    const id = setInterval(() => {
+      window.desktopAPI.getSyncStatus(sessionToken).then((st: any) => { if (st) setSyncStatus(st); }).catch(() => {});
+    }, 10000);
+    return () => clearInterval(id);
+  }, [sessionToken]);
 
   const handleLoginSuccess = (user: UserProfile, token: string) => {
     setCurrentUser(user);
@@ -255,7 +265,7 @@ const AppContent: React.FC = () => {
         />
 
         {/* Content Container (Header + Scrollable View + Footer) */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50 dark:bg-slate-950">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F4F6FB] dark:bg-[#0B1120]">
           {/* Application Header */}
           <AppHeader
             currentView={currentView}
@@ -264,17 +274,24 @@ const AppContent: React.FC = () => {
             currentUser={currentUser}
             isSyncing={isSyncing}
             onTriggerSync={handleTriggerSync}
+            schoolName={schoolName || currentUser.schoolName}
           />
 
           {/* Scrollable View Area with Error Boundary per Module */}
           <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 focus:outline-none">
-            <div className="max-w-7xl mx-auto w-full">
+            <div className="max-w-[1400px] mx-auto w-full">
               {currentView === 'dashboard' && (
                 <ErrorBoundary moduleName="Dashboard" onNavigateHome={() => setCurrentView('dashboard')}>
                   <DashboardView
                     metrics={metrics}
                     onNavigate={(view) => setCurrentView(view)}
                   />
+                </ErrorBoundary>
+              )}
+
+              {currentView === 'substitutes' && (
+                <ErrorBoundary moduleName="Substitute Teachers" onNavigateHome={() => setCurrentView('dashboard')}>
+                  <SubstitutesView sessionToken={sessionToken} onBack={() => setCurrentView('dashboard')} />
                 </ErrorBoundary>
               )}
 

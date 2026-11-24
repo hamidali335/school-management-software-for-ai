@@ -55,7 +55,7 @@ export class EmployeeRepository {
     return { ...emp, createdAt: now };
   }
 
-  public listEmployees(schoolId: string, query?: { search?: string; status?: string; department?: string }): EmployeeRecord[] {
+  public listEmployees(schoolId: string, query?: { search?: string; status?: string; department?: string; isTeaching?: boolean }): EmployeeRecord[] {
     let sql = `
       SELECT id, school_id as schoolId, employee_code as employeeCode, full_name as fullName,
              designation, department, is_teaching as isTeaching, phone, email, qualification,
@@ -72,6 +72,10 @@ export class EmployeeRepository {
     if (query?.department) {
       sql += ' AND department = ?';
       params.push(query.department);
+    }
+    if (typeof query?.isTeaching === 'boolean') {
+      sql += ' AND is_teaching = ?';
+      params.push(query.isTeaching ? 1 : 0);
     }
     if (query?.search) {
       sql += ' AND (full_name LIKE ? OR employee_code LIKE ? OR designation LIKE ?)';
